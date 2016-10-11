@@ -1,7 +1,7 @@
-all: clear  clear  compile
+all: clear compile
 
 clear:
 	clear
 
 compile:
-	gcc -o cs345sh test.c parser.c shell.c
+	gcc -o cs345sh shell.c parser.c dispatcher.c
