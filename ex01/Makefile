@@ -4,4 +4,4 @@ clear:
 	clear
 
 compile:
-	gcc -o cs345sh shell.c parser.c dispatcher.c
+	gcc -o cs345sh shell.c parser.c dispatcher.c datastructs.c

@@ -1,23 +1,19 @@
-#include <unistd.h>
 #include <assert.h>
+#include <unistd.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 
 #include "shell.h"
+#include "datastructs.h"
 #include "dispatcher.h"
 #include "parser.h"
 
 #define TRUE 1
+
 int status;
-
-void set_lvar(char* name, char* cmd);
-
-void unset_lvar(char* name);
-
-void print_lvar(void);
-
-int validate_lvar_name(char* name);
-
-void destroy_lvar(void);
+extern lvar_p lvar_list;
 
 void display_prompt(void){
 	char temp[1024];
@@ -33,8 +29,7 @@ void display_prompt(void){
 void execute_cmd(char* buff){
 	int cmd_type;
 	cmd_type = get_cmd_type(buff);
-
-	(*executor[cmd_type])(buff);
+	execute(buff,cmd_type);
 }
 
 int main(int argc, char const *argv[]){
@@ -43,6 +38,7 @@ int main(int argc, char const *argv[]){
 
 		execute_cmd(buff);
 
+		display_prompt();
 	/* 	int pid;
 		pid = fork();
 
