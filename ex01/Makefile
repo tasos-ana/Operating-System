@@ -4,4 +4,4 @@ clear:
 	clear
 
 compile:
-	gcc -o shell test.c parser.c
+	gcc -o cs345sh test.c parser.c shell.c
