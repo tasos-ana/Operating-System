@@ -4,7 +4,31 @@
 #include "dispatcher.h"
 
 int get_cmd_type(char *buff){
-
+  if(strstr(buff,"exit")!=NULL){
+    
+  }else if(strstr(buff,"unset")!=NULL){
+    
+  }else if(strstr(buff,"set")!=NULL){
+    
+  }else if(strstr(buff,"printlvar")!=NULL){
+    
+  }else if(strstr(buff,"|")!=NULL){
+    
+  }else if(strstr(buff,"<")!=NULL){
+    
+  }else if(strstr(buff,">")!=NULL){
+    
+  }else if(strstr(buff,"<<")!=NULL){
+    
+  }else if(strstr(buff,"-")!=NULL){
+    
+  }
+  
+  else{
+   printf("le poul"); 
+  }
+  
+  
 }
 
 void execute_simple(char *buff){

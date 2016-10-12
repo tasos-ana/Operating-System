@@ -32,6 +32,7 @@ lvar_p search_on_lvar(char* name){
 			return head;
 		}
 		if(head->next!=NULL) {head=head->next;}
+		else break;
 	}
 	return head;
 }
@@ -48,8 +49,8 @@ void set_lvar(char* name, char* cmd){
 		return;
 	}
 	index = search_on_lvar(name);
-	if(strcmp(index->name,name))	index->cmd = strdup(cmd);
-	else								index->next = create_lvar(name,cmd);
+	if(strcmp(index->name,name)==0)	index->cmd = strdup(cmd);
+	else				index->next = create_lvar(name,cmd);
 }
 
 void unset_lvar(char* name){
@@ -62,8 +63,9 @@ void unset_lvar(char* name){
 	}
 
 	if(strcmp(head->name,name)==0){
-		free(lvar_list);
-		lvar_list = NULL;
+		lvar_list = head->next;
+		free(head);
+		head = NULL;
 		return;
 	}
 
@@ -83,6 +85,10 @@ void unset_lvar(char* name){
 void print_lvar(void){
 	lvar_p head = lvar_list;
 
+	if(isEmpty_lvar()){
+	  printf("Local variables table it's empty.\n");
+	}
+	
 	while(head!=NULL){
 		printf("%s=%s\n", head->name , head->cmd);
 		head = head->next;
