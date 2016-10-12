@@ -14,16 +14,22 @@
 int status;
 char *tokens[128];
 char** buff;
+char* home_dir = NULL;
+char* curr_dir = NULL;
 
 void display_prompt(void){
 	char temp[1024];
 	char* user_name = getlogin();
-	char* dir_name  = getcwd(temp,1024);
-
+	if(curr_dir==NULL){
+		curr_dir = strdup(getcwd(temp,1024));
+	}
+	if(home_dir==NULL){
+		home_dir = strdup(curr_dir);
+	}
 	assert(user_name!=NULL);
-	assert(dir_name!=NULL);
+	assert(curr_dir!=NULL);
 
-	printf("%s@cs345sh%s/$ ",user_name,dir_name);
+	printf("%s@cs345sh%s/$ ",user_name,curr_dir);
 }
 
 void tokenize(char *s) { /*tokenization of input arguments*/

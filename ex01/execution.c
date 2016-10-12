@@ -7,8 +7,14 @@
 #include "execution.h"
 #include "datastructs.h"
 
+extern char* home_dir;
+extern char* curr_dir;
+
 void execute_exit(char **buff){
-	printf("exit\n");
+	destroy_lvar();
+	free(home_dir);
+	free(curr_dir);
+	exit(0);
 }
 
 void execute_simple(char **buff){
@@ -16,7 +22,27 @@ void execute_simple(char **buff){
 }
 
 void execute_cd(char **buff){
-	printf("cd\n");
+	if(buff[1] == NULL){
+		chdir(home_dir);
+		free(curr_dir);
+		curr_dir = strdup(home_dir);
+	}else{
+		int s1,s2;
+		s1 = strlen(curr_dir);
+		s2 = strlen(buff[1]);
+		char new_dir[s1+s2+2];
+		strcpy(new_dir,curr_dir);
+		strcat(new_dir,"/");
+		strcat(new_dir,buff[1]);
+
+		if(chdir(new_dir)==-1){
+			fprintf(stderr, "No such file or directory.\n");
+			return;
+		}
+
+		free(curr_dir);
+		curr_dir = strdup(new_dir);
+	}	
 }
 
 void execute_pipe(char **buff){
@@ -25,11 +51,9 @@ void execute_pipe(char **buff){
 
 void execute_redirection(char **buff){
 	printf("redirection\n");
-
 }
 
 void execute_set_var(char **buff){
-
   if(buff[1]==NULL){
   	fprintf(stderr, "The command it's wrong.\n" );
   	return;
@@ -37,7 +61,6 @@ void execute_set_var(char **buff){
   char* saveptr;
   char* var, *ret;
   char cmd[1024];
- 
 
   var = strtok_r(buff[1],"=",&saveptr);
 
