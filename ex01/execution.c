@@ -25,16 +25,49 @@ void execute_pipe(char **buff){
 
 void execute_redirection(char **buff){
 	printf("redirection\n");
+
 }
 
 void execute_set_var(char **buff){
-  printf("set\n");
+
+  if(buff[1]==NULL){
+  	fprintf(stderr, "The command it's wrong.\n" );
+  	return;
+  }
+  char* saveptr;
+  char* var, *ret;
+  char cmd[1024];
+ 
+
+  var = strtok_r(buff[1],"=",&saveptr);
+
+  ret = strtok_r(NULL," ",&saveptr);
+  strcpy(cmd,ret);
+
+  int i = 2;
+  while(buff[i]!=NULL){
+  	strcat(cmd,buff[i]);
+  	i++;
+  }
+  set_lvar(var,cmd);
 }
 
 void execute_unset_var(char **buff){
-	printf("unset\n");
+	if(buff[1]==NULL){
+  		fprintf(stderr, "The command it's wrong.\n" );
+  		return;
+  	}
+  	int i=1;
+  	while(buff[i]!=NULL){
+  		unset_lvar(buff[i]);
+  		i++;
+  	}
 }
 
 void execute_printl_vars(char **buff){
-	printf("print\n");
+	if(buff[1]!=NULL){
+  		fprintf(stderr, "The command it's wrong.\n" );
+  		return;
+  	}
+	print_lvar();
 }

@@ -37,6 +37,19 @@ lvar_p search_on_lvar(char* name){
 	return head;
 }
 
+char* get_lvar_cmd(char* name){
+	if(isEmpty_lvar()) return NULL;
+
+	lvar_p head = lvar_list;
+	while(head!=NULL){
+		if(strcmp(head->name,name)==0){
+			return head->cmd;
+		}
+		head=head->next;
+	}
+	return NULL;
+}
+
 void set_lvar(char* name, char* cmd){
 	lvar_p index;
 

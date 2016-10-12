@@ -15,6 +15,8 @@ lvar_p create_lvar(char* name, char* cmd);
 
 lvar_p search_on_lvar(char* name);
 
+char* get_lvar_cmd(char* name);
+
 void set_lvar(char* name, char* cmd);
 
 void unset_lvar(char* name);
