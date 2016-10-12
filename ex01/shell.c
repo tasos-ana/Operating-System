@@ -6,14 +6,14 @@
 
 
 #include "shell.h"
-#include "datastructs.h"
-#include "dispatcher.h"
-#include "parser.h"
+#include "execution.h"
 
 #define TRUE 1
+#define LEN(x) (sizeof(x) / sizeof(*(x)))
 
 int status;
-extern lvar_p lvar_list;
+char *tokens[128];
+char** buff;
 
 void display_prompt(void){
 	char temp[1024];
@@ -26,19 +26,105 @@ void display_prompt(void){
 	printf("%s@cs345sh%s/$ ",user_name,dir_name);
 }
 
-void execute_cmd(char* buff){
-	int cmd_type;
-	cmd_type = get_cmd_type(buff);
-	execute(buff,cmd_type);
+void tokenize(char *s) { /*tokenization of input arguments*/
+	char *p, *last;
+	int i = 0;
+
+	for ((p = strtok_r(s, " ", &last)); p;
+	    (p = strtok_r(NULL, " ", &last))) {
+		if (i < LEN(tokens) - 1) {
+			tokens[i] = p;
+			i++;
+		}
+	}
+	tokens[i] = NULL;
+}
+
+char** parse_command(void){
+	char buf[1024];
+
+	fgets(buf,sizeof(buf),stdin);
+	buf[strcspn(buf,"\n")] = '\0';
+	tokenize(buf);
+	
+	return tokens;
+}
+
+void execute_cmd(void){
+	if(buff[0]==NULL) return;
+	
+	if(strcmp(buff[0],"exit")==0){
+		execute_exit(buff);
+		return;
+	}
+
+	if(strcmp(buff[0],"unset")==0){
+		execute_unset_var(buff);
+		return;
+	}
+
+	if(strcmp(buff[0],"set")==0){
+		execute_set_var(buff);
+		return;
+	}
+
+	if(strcmp(buff[0],"printlvar")==0){
+		execute_printl_vars(buff);
+		return;
+	}
+
+	if(strcmp(buff[0],"cd")==0){
+		execute_cd(buff);
+		return;
+	}
+
+	int i=0;
+	while(buff[i]!=NULL){
+		if(strstr(buff[i],"|")!=NULL){
+      		execute_pipe(buff);
+      		return;
+   		}
+    	if(strstr(buff[i],"<")!=NULL){
+      		execute_redirection(buff);
+      		return;
+    	}
+    	if(strstr(buff[i],">")!=NULL){
+      		execute_redirection(buff);
+      		return;
+    	}
+    	if(strstr(buff[i],"<<")!=NULL){
+      		execute_redirection(buff);
+      		return;
+    	}
+		i++;
+	}
+
+	if(strcmp(buff[0],"ls")==0 ||
+       strcmp(buff[0],"echo")==0 ||
+       strcmp(buff[0],"cat")==0 ||
+       strcmp(buff[0],"mv")==0 ||
+       strcmp(buff[0],"rm")==0 ||
+       strcmp(buff[0],"cp")==0 ||
+       strcmp(buff[0],"sort")==0 ||
+       strcmp(buff[0],"head")==0 ||
+       strcmp(buff[0],"grep")==0)
+	{
+		execute_simple(buff);
+		return;
+	}
+
+	fprintf(stderr, "The command it's wrong.\n" );
 }
 
 int main(int argc, char const *argv[]){
+	while(TRUE){
 		display_prompt(); /*display prompt on screen*/
-		char* buff = parse_command(); /*read input from terminal*/
 
-		execute_cmd(buff);
+		buff = parse_command(); /*read input from terminal*/
 
-		display_prompt();
+		execute_cmd();
+
+	}
 	/* 	int pid;
 		pid = fork();
 

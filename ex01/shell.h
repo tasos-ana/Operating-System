@@ -3,6 +3,10 @@
 
 void display_prompt(void);
 
-void execute_cmd(char* buff);
+void tokenize(char *s);
+
+char** parse_command(void);
+
+void execute_cmd(void);
 
 #endif	/* SHELL_H*/
