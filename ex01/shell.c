@@ -11,7 +11,6 @@
 #define TRUE 1
 #define LEN(x) (sizeof(x) / sizeof(*(x)))
 
-int status;
 char *tokens[128];
 char** buff;
 char* home_dir = NULL;
@@ -115,6 +114,7 @@ void execute_cmd(void){
        strcmp(buff[0],"head")==0 ||
        strcmp(buff[0],"grep")==0)
 	{
+		printf("%s\n",buff[0]);
 		execute_simple(buff);
 		return;
 	}
@@ -131,20 +131,5 @@ int main(int argc, char const *argv[]){
 		execute_cmd();
 
 	}
-	/* 	int pid;
-		pid = fork();
-
-		if(pid>0){ //pid of the father
-			printf("%s\n","hi father");
-			waitpid(-1, &status, 0);
-
-		}else if(pid==0){ //pid of the child
-			printf("%s\n","i am child");
-			execve(command[0],parameters,0);
-	
-		}else{/Something wrong hapend
-			perror("Fork failed\n");
-		}
-	*/
 	return 0;
 }

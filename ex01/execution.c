@@ -10,6 +10,8 @@
 extern char* home_dir;
 extern char* curr_dir;
 
+int status;
+
 void execute_exit(char **buff){
 	destroy_lvar();
 	free(home_dir);
@@ -18,7 +20,38 @@ void execute_exit(char **buff){
 }
 
 void execute_simple(char **buff){
-	printf("simple\n");
+	
+	int pid;
+	pid = fork();
+	if(pid>0){
+		printf("%s\n","pateras");
+		waitpid(-1,&status,0);
+	}else if(pid==0){
+		/*if(strcmp(buff[0],"echo")==0 && buff[1]!=NULL){
+			char* cmd;
+			cmd = get_lvar_cmd(buff[1]);
+			if(cmd!=NULL){
+				printf("%s\n",cmd);
+			}
+		}*/
+		
+		char bin_path[128];
+		strcpy(bin_path,"/bin/");
+		strcat(bin_path,buff[0]);
+		printf("---%s\n",bin_path);
+		char* param[128];
+		int i = 1;
+
+		while(buff[i]!=NULL){
+			param[i-1] = buff[i];
+			i++;
+		}
+		param[i] = NULL;
+		printf("---%s\n",bin_path);
+		execve(bin_path,&param[0],0);
+	}else{
+		perror("Fork failed\n");
+	}
 }
 
 void execute_cd(char **buff){
