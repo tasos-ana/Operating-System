@@ -20,11 +20,13 @@ void execute_exit(char **buff){
 }
 
 void execute_simple(char **buff){
-	
+	printf("2----%s\n",buff[0]);
+	char* tmp = strdup(buff[0]);
 	int pid;
 	pid = fork();
 	if(pid>0){
 		printf("%s\n","pateras");
+		printf("0----%s\n",buff[0]);
 		waitpid(-1,&status,0);
 	}else if(pid==0){
 		/*if(strcmp(buff[0],"echo")==0 && buff[1]!=NULL){
@@ -36,7 +38,9 @@ void execute_simple(char **buff){
 		}*/
 		
 		char bin_path[128];
+		printf("3----%s\n",tmp);
 		strcpy(bin_path,"/bin/");
+		printf("4----%s\n",tmp);
 		strcat(bin_path,buff[0]);
 		printf("---%s\n",bin_path);
 		char* param[128];

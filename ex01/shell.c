@@ -114,7 +114,7 @@ void execute_cmd(void){
        strcmp(buff[0],"head")==0 ||
        strcmp(buff[0],"grep")==0)
 	{
-		printf("%s\n",buff[0]);
+		printf("1------%s\n",buff[0]);
 		execute_simple(buff);
 		return;
 	}
