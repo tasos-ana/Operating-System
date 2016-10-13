@@ -33,13 +33,14 @@ void execute_simple(char **buff){
 	if(pid>0){
 		waitpid(-1,&status,0);
 	}else if(pid==0){
-		if(strcmp(tmp[0],"echo")==0){
+		/*if(strcmp(tmp[0],"echo")==0){
 			char* cmd;
 			cmd = get_lvar_cmd(tmp[1]);
 			if(cmd!=NULL){
 				printf("%s\n",cmd);
+				exit(EXIT_SUCCESS);
 			}
-		}
+		}*/
 		char bin_path[128];
 		strcpy(bin_path,"/bin/");
 		strcat(bin_path,tmp[0]);
