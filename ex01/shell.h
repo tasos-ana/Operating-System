@@ -7,6 +7,6 @@ void tokenize(char *s);
 
 char** parse_command(void);
 
-void execute_cmd(void);
+void execute_cmd(char** buf);
 
 #endif	/* SHELL_H*/

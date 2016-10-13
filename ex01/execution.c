@@ -4,11 +4,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <sys/stat.h>
+#include <fcntl.h>
+
 #include "execution.h"
 #include "datastructs.h"
 
 extern char* home_dir;
-extern int deamon;
+extern int deamon_f;
+extern int redirection_f;
+extern int pipe_f;
+
+extern void execute_cmd(char **buf);
 
 int status;
 
@@ -32,11 +39,26 @@ void execute_simple(char **buff){
 	
 	pid = fork();
 	if(pid>0){
-		if(!deamon) waitpid(-1,&status,0);
+		if(!deamon_f) waitpid(-1,&status,0);
 		else{
 			fprintf(stdout, "%s:%d\n",tmp[0],pid);
 		}
 	}else if(pid==0){
+		if(redirection_f){
+			/*Creating a file descriptor so we can get from fd 1 (stdout)
+	 		the output from execv
+			O_RDWR : open the file for read & write
+			O_CREAT: create the file and open it if isnt exist	
+			S_IRUSR: give to user permission to read
+			S_IwUSR: give to user permission to write
+			*/
+			int fd = open("tempfile.txt", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
+			dup2(fd,1);
+			close(fd);
+		}
+		if(pipe_f){
+
+		}		
 		if(strcmp(tmp[0],"echo")==0){
 			if (tmp[1]!=NULL){
 				if(tmp[1][0] == '$'){
@@ -81,7 +103,52 @@ void execute_pipe(char **buff){
 }
 
 void execute_redirection(char **buff){
-	printf("redirection\n");
+	redirection_f = 1;
+	char* cmd[128];
+	char* file[128];
+	cmd[0] = NULL;
+	file[0] = NULL;
+	int i=0;
+	int k=0,l=0;
+	int found = 0;
+
+	while(buff[i]!=NULL){
+		if(strcmp(buff[i],">")==0){found = 1;}
+		if(!found){//eimaste akoma sta tokens tis command
+			cmd[k] = buff[i];
+			k++;
+		}else{//eimaste sta tokens tou file
+			if(strcmp(buff[i],">")!=0){
+				file[l] = buff[i];
+				l++;
+			}
+		}
+		i++;
+	}
+
+	if(!found){
+		fprintf(stderr, "The command it's wrong.\n" );
+		return;
+	}
+	cmd[k] = NULL;
+	file[l] = NULL;
+
+	execute_cmd(cmd);
+
+	FILE *fp1;
+	fp1 = fopen("tempfile.txt","r");
+
+	FILE *fp2;
+	fp2 = fopen(file[0],"w+");
+
+	char temp[255];
+
+	while(fgets(temp,sizeof(temp),fp1)!=NULL){
+		fprintf(fp2,temp);
+	}
+	fclose(fp1);
+	fclose(fp2);
+	remove("tempfile.txt");
 }
 
 void execute_set_var(char **buff){

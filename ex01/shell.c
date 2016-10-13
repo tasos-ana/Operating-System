@@ -13,9 +13,10 @@
 
 char *tokens[128];
 char tmp[128];
-char** buff;
 char* home_dir = NULL;
-int deamon;
+int deamon_f;
+int redirection_f;
+int pipe_f;
 
 void display_prompt(void){
 	char temp[1024];
@@ -28,7 +29,7 @@ void display_prompt(void){
 	assert(user_name!=NULL);
 	assert(curr_dir!=NULL);
 
-	fprintf(stdout,"%s@cs345sh%s/$ ",user_name,curr_dir);
+	printf("%s@cs345sh%s/$ ",user_name,curr_dir);
 }
 
 void tokenize(char *s) { /*tokenization of input arguments*/
@@ -42,18 +43,16 @@ void tokenize(char *s) { /*tokenization of input arguments*/
 			i++;
 		}
 	}
-	printf("1\n");
 	last = tokens[i-1];
 	if(last[strlen(last)-1] == '&'){/*eimaste sto teleftaio token*/
 		strncpy(tmp,last,strlen(last)-1);
 		tokens[i-1] = tmp;
-		deamon = 1;
+		deamon_f = 1;
 	}
 	tokens[i] = NULL;
 }
 
 char** parse_command(void){
-	deamon = 0;
 	char buf[1024];
 
 	fgets(buf,sizeof(buf),stdin);
@@ -63,67 +62,67 @@ char** parse_command(void){
 	return tokens;
 }
 
-void execute_cmd(void){
-	if(buff[0]==NULL) return;
+void execute_cmd(char **buf){
+	if(buf[0]==NULL) return;
 	
-	if(strcmp(buff[0],"exit")==0){
-		execute_exit(buff);
+	if(strcmp(buf[0],"exit")==0){
+		execute_exit(buf);
 		return;
 	}
 
-	if(strcmp(buff[0],"unset")==0){
-		execute_unset_var(buff);
+	if(strcmp(buf[0],"unset")==0){
+		execute_unset_var(buf);
 		return;
 	}
 
-	if(strcmp(buff[0],"set")==0){
-		execute_set_var(buff);
+	if(strcmp(buf[0],"set")==0){
+		execute_set_var(buf);
 		return;
 	}
 
-	if(strcmp(buff[0],"printlvar")==0){
-		execute_printl_vars(buff);
+	if(strcmp(buf[0],"printlvar")==0){
+		execute_printl_vars(buf);
 		return;
 	}
 
-	if(strcmp(buff[0],"cd")==0){
-		execute_cd(buff);
+	if(strcmp(buf[0],"cd")==0){
+		execute_cd(buf);
 		return;
 	}
 
 	int i=0;
-	while(buff[i]!=NULL){
-		if(strstr(buff[i],"|")!=NULL){
-      		execute_pipe(buff);
+	while(buf[i]!=NULL){
+		if(strstr(buf[i],"|")!=NULL){
+      		execute_pipe(buf);
       		return;
    		}
-    	if(strstr(buff[i],"<")!=NULL){
-      		execute_redirection(buff);
+    	if(strstr(buf[i],"<")!=NULL){
+      		execute_redirection(buf);
       		return;
     	}
-    	if(strstr(buff[i],">")!=NULL){
-      		execute_redirection(buff);
+    	if(strstr(buf[i],">")!=NULL){
+      		execute_redirection(buf);
       		return;
     	}
-    	if(strstr(buff[i],"<<")!=NULL){
-      		execute_redirection(buff);
+    	if(strstr(buf[i],"<<")!=NULL){
+      		execute_redirection(buf);
       		return;
     	}
 		i++;
 	}
 
-	if(strstr(buff[0],"ls")!=NULL ||
-	   strcmp(buff[0],"echo")==0 ||
-	   strcmp(buff[0],"cat")==0 ||
-	   strcmp(buff[0],"mv")==0 ||
-	   strcmp(buff[0],"rm")==0 ||
-	   strcmp(buff[0],"cp")==0 ||
-	   strcmp(buff[0],"sort")==0 ||
-	   strcmp(buff[0],"head")==0 ||
-	   strcmp(buff[0],"grep")==0 ||
-	   strcmp(buff[0],"mkdir")==0)
+	if(strstr(buf[0],"ls")!=NULL ||
+	   strcmp(buf[0],"echo")==0 ||
+	   strcmp(buf[0],"cat")==0 ||
+	   strcmp(buf[0],"mv")==0 ||
+	   strcmp(buf[0],"rm")==0 ||
+	   strcmp(buf[0],"cp")==0 ||
+	   strcmp(buf[0],"sort")==0 ||
+	   strcmp(buf[0],"head")==0 ||
+	   strcmp(buf[0],"grep")==0 ||
+	   strcmp(buf[0],"mkdir")==0)
 	{
-		execute_simple(buff);
+		execute_simple(buf);
 		return;
 	}
 
@@ -131,12 +130,17 @@ void execute_cmd(void){
 }
 
 int main(int argc, char const *argv[]){
+	char** buff;
 	while(TRUE){
+
+		deamon_f = 0;
+		redirection_f = 0;
+		pipe_f = 0;
 		display_prompt(); /*display prompt on screen*/
 
 		buff = parse_command(); /*read input from terminal*/
 
-		execute_cmd();
+		execute_cmd(buff);
 
 	}
 	return 0;
