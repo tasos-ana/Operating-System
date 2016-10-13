@@ -12,8 +12,10 @@
 #define LEN(x) (sizeof(x) / sizeof(*(x)))
 
 char *tokens[128];
+char tmp[128];
 char** buff;
 char* home_dir = NULL;
+int deamon;
 
 void display_prompt(void){
 	char temp[1024];
@@ -26,7 +28,7 @@ void display_prompt(void){
 	assert(user_name!=NULL);
 	assert(curr_dir!=NULL);
 
-	printf("%s@cs345sh%s/$ ",user_name,curr_dir);
+	fprintf(stdout,"%s@cs345sh%s/$ ",user_name,curr_dir);
 }
 
 void tokenize(char *s) { /*tokenization of input arguments*/
@@ -40,10 +42,18 @@ void tokenize(char *s) { /*tokenization of input arguments*/
 			i++;
 		}
 	}
+	printf("1\n");
+	last = tokens[i-1];
+	if(last[strlen(last)-1] == '&'){/*eimaste sto teleftaio token*/
+		strncpy(tmp,last,strlen(last)-1);
+		tokens[i-1] = tmp;
+		deamon = 1;
+	}
 	tokens[i] = NULL;
 }
 
 char** parse_command(void){
+	deamon = 0;
 	char buf[1024];
 
 	fgets(buf,sizeof(buf),stdin);
@@ -102,7 +112,7 @@ void execute_cmd(void){
 		i++;
 	}
 
-	if(strcmp(buff[0],"ls")==0 ||
+	if(strstr(buff[0],"ls")!=NULL ||
 	   strcmp(buff[0],"echo")==0 ||
 	   strcmp(buff[0],"cat")==0 ||
 	   strcmp(buff[0],"mv")==0 ||
