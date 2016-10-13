@@ -14,14 +14,12 @@
 char *tokens[128];
 char** buff;
 char* home_dir = NULL;
-char* curr_dir = NULL;
 
 void display_prompt(void){
 	char temp[1024];
 	char* user_name = getlogin();
-	if(curr_dir==NULL){
-		curr_dir = strdup(getcwd(temp,1024));
-	}
+	char* curr_dir = getcwd(temp,1024);
+	
 	if(home_dir==NULL){
 		home_dir = strdup(curr_dir);
 	}
@@ -105,16 +103,16 @@ void execute_cmd(void){
 	}
 
 	if(strcmp(buff[0],"ls")==0 ||
-       strcmp(buff[0],"echo")==0 ||
-       strcmp(buff[0],"cat")==0 ||
-       strcmp(buff[0],"mv")==0 ||
-       strcmp(buff[0],"rm")==0 ||
-       strcmp(buff[0],"cp")==0 ||
-       strcmp(buff[0],"sort")==0 ||
-       strcmp(buff[0],"head")==0 ||
-       strcmp(buff[0],"grep")==0)
+	   strcmp(buff[0],"echo")==0 ||
+	   strcmp(buff[0],"cat")==0 ||
+	   strcmp(buff[0],"mv")==0 ||
+	   strcmp(buff[0],"rm")==0 ||
+	   strcmp(buff[0],"cp")==0 ||
+	   strcmp(buff[0],"sort")==0 ||
+	   strcmp(buff[0],"head")==0 ||
+	   strcmp(buff[0],"grep")==0 ||
+	   strcmp(buff[0],"mkdir")==0)
 	{
-		printf("1------%s\n",buff[0]);
 		execute_simple(buff);
 		return;
 	}

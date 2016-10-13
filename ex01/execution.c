@@ -8,77 +8,62 @@
 #include "datastructs.h"
 
 extern char* home_dir;
-extern char* curr_dir;
 
 int status;
 
 void execute_exit(char **buff){
 	destroy_lvar();
 	free(home_dir);
-	free(curr_dir);
 	exit(0);
 }
 
 void execute_simple(char **buff){
-	printf("2----%s\n",buff[0]);
-	char* tmp = strdup(buff[0]);
+	assert(buff[0]!=NULL);
 	int pid;
+	char* tmp[128];
+	int i=0;
+	
+	while(buff[i]!=NULL){
+	  tmp[i] = strdup(buff[i]);
+	  i++;
+	}
+	tmp[i] = NULL;
+	
 	pid = fork();
 	if(pid>0){
-		printf("%s\n","pateras");
-		printf("0----%s\n",buff[0]);
 		waitpid(-1,&status,0);
 	}else if(pid==0){
-		/*if(strcmp(buff[0],"echo")==0 && buff[1]!=NULL){
+		if(strcmp(tmp[0],"echo")==0){
 			char* cmd;
-			cmd = get_lvar_cmd(buff[1]);
+			cmd = get_lvar_cmd(tmp[1]);
 			if(cmd!=NULL){
 				printf("%s\n",cmd);
 			}
-		}*/
-		
-		char bin_path[128];
-		printf("3----%s\n",tmp);
-		strcpy(bin_path,"/bin/");
-		printf("4----%s\n",tmp);
-		strcat(bin_path,buff[0]);
-		printf("---%s\n",bin_path);
-		char* param[128];
-		int i = 1;
-
-		while(buff[i]!=NULL){
-			param[i-1] = buff[i];
-			i++;
 		}
-		param[i] = NULL;
-		printf("---%s\n",bin_path);
-		execve(bin_path,&param[0],0);
+		char bin_path[128];
+		strcpy(bin_path,"/bin/");
+		strcat(bin_path,tmp[0]);
+		execve(bin_path,&tmp[0],0);
 	}else{
 		perror("Fork failed\n");
+	}
+	
+	i=0;
+	while(tmp[i]!=NULL){
+	  free(tmp[i]);
+	  tmp[i]=NULL;
+	  i++;
 	}
 }
 
 void execute_cd(char **buff){
 	if(buff[1] == NULL){
 		chdir(home_dir);
-		free(curr_dir);
-		curr_dir = strdup(home_dir);
 	}else{
-		int s1,s2;
-		s1 = strlen(curr_dir);
-		s2 = strlen(buff[1]);
-		char new_dir[s1+s2+2];
-		strcpy(new_dir,curr_dir);
-		strcat(new_dir,"/");
-		strcat(new_dir,buff[1]);
-
-		if(chdir(new_dir)==-1){
-			fprintf(stderr, "No such file or directory.\n");
-			return;
-		}
-
-		free(curr_dir);
-		curr_dir = strdup(new_dir);
+	  if(chdir(buff[1])==-1){
+	    fprintf(stderr, "No such file or directory.\n");
+	    return;
+	  }
 	}	
 }
 
