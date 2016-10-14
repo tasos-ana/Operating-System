@@ -329,18 +329,33 @@ void execute_printl_vars(char **buff){
  */
 void scout_buff(char** buff){
 	int i = 0;
+	char *tmp;
 	while(buff[i]!=NULL){
-		if(strcmp(buff[i],"<")== 0){
+		if( (tmp = strstr(buff[i],"<")) != NULL){
+			if(strlen(tmp)!=1){
+				input_redirection_f  =0;
+				output_redirection_f =0;
+				append_redirection_f =0;
+				return;
+			}
 			input_redirection_f = 1;//on the flag that we found input
 			input_redirection_index = i;// where we found it
 		}
-		if(strcmp(buff[i],">")==0){
-			output_redirection_f = 1;//on the flag that we found output
-			output_redirection_index = i;// where we found it
-		}
-		if(strcmp(buff[i],">>")==0){
-			append_redirection_f = 1;//on the flag that we found append
-			append_redirection_index = i;//where we found it
+		if( (tmp = strstr(buff[i],">")) != NULL){
+			if( (strlen(tmp)==2) && strcmp(tmp,">>")==0){
+				append_redirection_f = 1;//on the flag that we found append
+				append_redirection_index = i;//where we found it
+				i++;
+			}
+			else if(strlen(tmp)!=1){
+				input_redirection_f  =0;
+				output_redirection_f =0;
+				append_redirection_f =0;
+				return;
+			}else{
+				output_redirection_f = 1;//on the flag that we found output
+				output_redirection_index = i;// where we found i
+			}
 		}
 		i++;
 	}
