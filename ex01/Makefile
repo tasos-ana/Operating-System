@@ -1,4 +1,4 @@
-all: clear compile
+all: clear gdb compile
 
 clear:
 	clear

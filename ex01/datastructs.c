@@ -1,3 +1,10 @@
+/*
+ * HY-345 / Exercise 1 / make shell with basic cmd
+ * Author: Anastasas Anastasios
+ * Code: csd3166
+ * Year: 2016-2017
+ */
+
 #include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -6,27 +13,40 @@
 
 #include "datastructs.h"
 
-lvar_p lvar_list = NULL;
 
+lvar_p lvar_list = NULL;//head of the local var struct
+
+/*
+ *Check if the struct it's empty
+ */
 int isEmpty_lvar(void){
 	if(lvar_list==NULL) return 1;
 	return 0;
 }
 
+/*
+ *Create new node local var
+ */
 lvar_p create_lvar(char* name, char* cmd){
 	assert(name!=NULL);
 	assert(cmd!=NULL);
 	lvar_p tmp = malloc(sizeof(lvar_s));
 	assert(tmp!=NULL);
-	tmp->name = strdup(name);
-	tmp->cmd = strdup(cmd);
+	tmp->name = strdup(name);//copying
+	tmp->cmd = strdup(cmd);//copying
 	tmp->next = NULL;
 }
 
+/*
+ *Searching on struct if the node with name contained
+ * and return that node or null
+ */
 lvar_p search_on_lvar(char* name){
+	assert(name!=NULL);
 	lvar_p head = lvar_list;
 
-	assert(name!=NULL);
+	if(isEmpty_lvar()) return NULL;
+	
 	while(head!=NULL){
 		if(strcmp(head->name,name)==0){
 			return head;
@@ -37,27 +57,27 @@ lvar_p search_on_lvar(char* name){
 	return head;
 }
 
+/*
+ * Searching for the name and get the field cmd
+ */
 char* get_lvar_cmd(char* name){
-	if(isEmpty_lvar()) return NULL;
-
-	lvar_p head = lvar_list;
-	while(head!=NULL){
-		if(strcmp(head->name,name)==0){
-			return head->cmd;
-		}
-		head=head->next;
-	}
-	return NULL;
+	lvar_p node = search_on_lvar(name);
+	if(node!=NULL) return node->cmd;
+	else return NULL;
 }
 
+/*
+ *Add new element on struct
+ */
 void set_lvar(char* name, char* cmd){
 	lvar_p index;
 
 	assert(name!=NULL);
 	assert(cmd!=NULL);
-	if(isvalid_lvar_name(name)==0) return;
+	if(isvalid_lvar_name(name)==0) return;//checking the validation of the name
 
-	if(isEmpty_lvar()){
+
+	if(isEmpty_lvar()){//if it's empty we have the first node
 		lvar_list = create_lvar(name,cmd);
 		return;
 	}
@@ -66,15 +86,19 @@ void set_lvar(char* name, char* cmd){
 	else				index->next = create_lvar(name,cmd);
 }
 
+/*
+ * Remove the node with name if exist
+ */
 void unset_lvar(char* name){
 	lvar_p head = lvar_list;
 
 	assert(name!=NULL);
-	if(isEmpty_lvar()){
+	if(isEmpty_lvar()){//error if the list it's empty
 		fprintf(stderr, "fatal error- none variable defined.\n");
 		return;
 	}
 
+	//if it's the first node 'destroy' the list, free,nullifie
 	if(strcmp(head->name,name)==0){
 		lvar_list = head->next;
 		free(head);
@@ -92,13 +116,17 @@ void unset_lvar(char* name){
 		}
 		head=head->next;
 	}
+	//if we didnt found it printing error
 	fprintf(stderr, "fatal error- '%s' isnt defined.\n",name);
 }
 
+/*
+ *Print all the active node from the list
+ */
 void print_lvar(void){
 	lvar_p head = lvar_list;
 
-	if(isEmpty_lvar()){
+	if(isEmpty_lvar()){//error if it's empty
 	  printf("Local variables table it's empty.\n");
 	}
 	
@@ -108,6 +136,9 @@ void print_lvar(void){
 	}
 }
 
+/*
+ * Function for name validation, [a-zA-Z][0-9][_]
+ */
 int isvalid_lvar_name(char* name){
 	int i = 0;
 	
@@ -122,6 +153,10 @@ int isvalid_lvar_name(char* name){
 	return 1;
 }
 
+/*
+ *Destroy all the struct, free and nullifie each node from
+ * root to the end
+ */
 void destroy_lvar(void){
 	lvar_p head = lvar_list;
 	lvar_p tmp;
@@ -133,3 +168,10 @@ void destroy_lvar(void){
 	}
 	lvar_list = NULL;
 }
+
+/*
+ * HY-345 / Exercise 1 / make shell with basic cmd
+ * Author: Anastasas Anastasios
+ * Code: csd3166
+ * Year: 2016-2017
+ */
