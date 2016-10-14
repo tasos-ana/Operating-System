@@ -30,6 +30,9 @@ int redirection_f;
 int pipe_f;
 int input_redirection_f;
 int output_redirection_f;
+int append_redirection_f;
+
+extern int file_redirection_index;
 
 /*
  *Displaying the prompt
@@ -172,6 +175,7 @@ int main(int argc, char const *argv[]){
 		pipe_f = 0;
 		input_redirection_f = 0;
 		output_redirection_f = 0;
+		append_redirection_f = 0;
 
 		display_prompt(); /*display prompt on screen*/
 
