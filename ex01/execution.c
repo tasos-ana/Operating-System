@@ -39,7 +39,10 @@ int status;
 int input_redirection_index = -1; //the number of token that found '<' on redirection cmd
 int output_redirection_index = -1;//the number of token that found '>' on redirection cmd
 int append_redirection_index = -1;//the number of token that found '>>' on redirection cmd
+int pipe_index = -1;//the number of token that found '|' on redirection cmd
+int pipe_cmd = 0;//0 for left command and 1 for right
 int file_redirection_index = -1; ////the number of token that we add the file name for double redirection '<' '>' or '<' '>>'
+
 char* ret[128];
 
 /* 	Do all the action to exit from prompt
@@ -185,7 +188,68 @@ void execute_cd(char **buff){
  *Code for pipes
  */
 void execute_pipe(char **buff){
-	printf("pipe\n");
+	scout_buff(buff);
+	int pipefd[2];
+
+	if(pipe(pipefd)==-1){
+		perror("pipe");
+		exit(EXIT_FAILURE);
+	}
+
+	char* cmd1[128];
+	char* cmd2[128];
+
+	int i,j;
+
+	for(i=0; i<pipe_index;++i){
+		cmd1[i] = buff[i];
+	}
+	cmd1[i] = NULL;
+
+	i = 0;
+	j = pipe_index + 1;
+	while(buff[j]!=NULL){
+		cmd2[i] = buff[j];
+		i++;
+		j++;
+	}
+
+	dup2(pipefd[1],1);
+	execute_cmd(cmd1);
+	
+
+	dup2(pipefd[0],0);
+	close(pipefd[1]);
+	execute_cmd(cmd2);
+
+	close(pipefd[0]);
+/*
+	pid_t cpid;
+	char buf;
+
+	
+
+	cpid = fork();
+	if(cpid == -1){
+		perror("fork");
+		exit(EXIT_FAILURE);
+	}
+	if(cpid==0){
+		close(pipefd[1]);
+		while(read(pipefd[0],&buf,1)>0){
+			write(STDOUT_FILENO,&buf,1);
+		}
+		write(STDOUT_FILENO,"\n",1);
+		close(pipefd[0]);
+		exit(EXIT_SUCCESS);
+	}else{
+		close(pipefd[0]);
+		write(pipefd[1],argv[1],strlen(argv[1]));
+		close(pipefd[1]);
+		wait(NULL);
+		exit(EXIT_SUCCESS);
+	}
+*/
 }
 
 /*
@@ -325,6 +389,7 @@ void scout_buff(char** buff){
 				input_redirection_f  =0;
 				output_redirection_f =0;
 				append_redirection_f =0;
+				pipe_f = 0;
 				return;
 			}
 			input_redirection_f = 1;//on the flag that we found input
@@ -340,11 +405,22 @@ void scout_buff(char** buff){
 				input_redirection_f  =0;
 				output_redirection_f =0;
 				append_redirection_f =0;
+				pipe_f = 0;
 				return;
 			}else{
 				output_redirection_f = 1;//on the flag that we found output
 				output_redirection_index = i;// where we found i
 			}
+		}if( (tmp = strstr(buff[i],"|"))!=NULL ){
+			if(strlen(tmp)!=1){
+				input_redirection_f  =0;
+				output_redirection_f =0;
+				append_redirection_f =0;
+				pipe_f = 0;
+				return;
+			}
+			pipe_f = 1;
+			pipe_index = i;
 		}
 		i++;
 	}
