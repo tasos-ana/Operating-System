@@ -54,10 +54,19 @@ void execute_printl_vars(char **buff);
 void scout_buff(char** buff);
 
 /*
- * Open 2 files and transfer the data from tempfile to file.
- * tmpfile.txt contain the out from the cmd that runned
+ *Call this function to tokenize,parse the data from file when we have input redirection
+ */
+void input_redirection(char* file);
+
+/*
+ *Redirection the stdout (1) to the file
  */
 void output_redirection(char* file);
+
+/*
+ *Redirectio/append the stdout (1) to the file
+ */
+void append_redirection(char* file);
 
 #endif	/* EXECUTION_H*/
 /*

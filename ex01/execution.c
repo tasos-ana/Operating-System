@@ -17,10 +17,12 @@
 #include "execution.h"
 #include "datastructs.h"
 
+#define LEN(x) (sizeof(x) / sizeof(*(x)))
 /*
  *Defined on shell.c
  */
 extern char* home_dir;
+extern char** parse_command(void);
 
 /*Flags that defined on file shell.c
  */
@@ -38,6 +40,7 @@ int input_redirection_index = -1; //the number of token that found '<' on redire
 int output_redirection_index = -1;//the number of token that found '>' on redirection cmd
 int append_redirection_index = -1;//the number of token that found '>>' on redirection cmd
 int file_redirection_index = -1; ////the number of token that we add the file name for double redirection '<' '>' or '<' '>>'
+char* ret[128];
 
 /* 	Do all the action to exit from prompt
  *	destroy the local var table
@@ -57,6 +60,7 @@ void execute_simple(char **buff){
 	int pid;
 	char* tmp[128];
 	int i=0;
+	int j=0;
 	
 	while(buff[i]!=NULL){//copy the data from buff to a tmp array of string (because after fork the buff contain trashes)
 		tmp[i] = strdup(buff[i]);
@@ -71,60 +75,69 @@ void execute_simple(char **buff){
 			fprintf(stdout, "%s:%d\n",tmp[0],pid); //if we come here mean that our proccess are deamon => print the name and pid
 		}
 	}else if(pid==0){// pid=0 => we are on child
-		if(redirection_f && (output_redirection_f || append_redirection_f) ){//if we are on cmd like => cmd > file
-		  char* file_str;
-		  printf("---%d---\n",output_redirection_f);
-		  if(output_redirection_f){//just open file descriptor and overwrite file	
-			if(file_redirection_index == -1){
-			  printf("mpika1\n");
-			  file_str = "tempfile.txt";
-			}else{
-			  printf("mpika2\n");	
-			  file_str = strdup(tmp[file_redirection_index]);
-			  
-			  free(tmp[file_redirection_index]);
-			  tmp[file_redirection_index] = NULL;
-			  
-			  file_redirection_index = -1;//reset the index;
+		char* input_fname;
+		char* output_append_fname;
+		if(redirection_f){//if we have simple cmd from redirection
+			if(input_redirection_f){// if we have atleast input, maybe we have output or append or nothing
+				input_fname = strdup(tmp[input_redirection_index]);//copying the name of the input file
+				tmp[input_redirection_index] = NULL;//nulifie that cell because isn't parameter of the cmd
+				
+				input_redirection(input_fname);
+
+				//keep the file name if exist for output or append
+				free(input_fname);
+				input_fname=NULL;
+				if(output_redirection_f || append_redirection_f){//if we have output or append take the file name from tmp 
+					input_fname = strdup(tmp[input_redirection_index+1]);
+					free(tmp[input_redirection_index+1]);
+					tmp[input_redirection_index+1] = NULL;
+				}
+				
+				//add the exported data from file that return to ret in to the tmp
+				i = input_redirection_index;
+				j=0;
+				while(ret[j]!=NULL){
+					tmp[i] = strdup(ret[j]);
+					free(ret[j]);
+					ret[j]=NULL;
+					i++;
+					j++;
+				}
+				tmp[i] = NULL;
+
+				//redirect stdout to the file
+				if(output_redirection_f){//if we have output after input ( cmd<file1>file)
+					output_redirection(input_fname);
+					free(input_fname);
+					input_fname=NULL;
+				}
+				//redirect stdout to append on file
+				if(append_redirection_f){//if we have append after input (cmd<file>>file)
+					append_redirection(input_fname);
+					free(input_fname);
+					input_fname=NULL;
+				}
+			}else if(output_redirection_f){//if we have only one redirection and it's output
+				output_redirection(tmp[output_redirection_index]);//redirect stdout
+				free(tmp[output_redirection_index]);
+				tmp[output_redirection_index] = NULL;
+			}else{//if we have only one redirection and it's append
+				append_redirection(tmp[append_redirection_index]);
+				free(tmp[append_redirection_index]);
+				tmp[append_redirection_index] = NULL;
 			}
-			/*Creating a file descriptor so we can get from fd 1 (stdout)
-	 		 *the output from execv
-			 *O_RDWR : open the file for read & write
-			 *O_CREAT: create the file and open it if isnt exist	
-			 *S_IRUSR: give to user permission to read
-			 *S_IwUSR: give to user permission to write
-			 */
-			int fd = open(file_str, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
-			dup2(fd,1);
-			close(fd);
-		  }else{//open the file 2 for append not for overwrite
-			assert(file_redirection_index>=0);
-			 
-			 file_str = strdup(tmp[file_redirection_index]);
-			  
-			 free(tmp[file_redirection_index]);
-			 tmp[file_redirection_index] = NULL;
-			 file_redirection_index = -1;//reset the index;
-			 
-			 /*Creating a file descriptor so we can get from fd 1 (stdout)
-	 		 *the output from execv
-			 *O_RDWR : open the file for read & write
-			 *O_CREAT: create the file and open it if isnt exist	
-			 *S_IRUSR: give to user permission to read
-			 *S_IwUSR: give to user permission to write
-			 */
-			 int fd = open(file_str, O_APPEND | O_CREAT, S_IRUSR | S_IWUSR);
-			 dup2(fd,1);
-			 close(fd);
-		    
-		  }
-			
+			char bin_path[128];
+			strcpy(bin_path,"/bin/");
+			strcat(bin_path,tmp[0]);
+			execve(bin_path,&tmp[0],0);//run the command
+
+			redirection_f = 0; //reset flag
 		}
 		if(pipe_f){
 
 		}		
 		if(strcmp(tmp[0],"echo")==0){//checking if the simple command are the echo
-			if (tmp[1]!=NULL){// echo $var (cant be like echo)
+			if (tmp[1]!=NULL){//echo $var (cant be like echo)
 				if(tmp[1][0] == '$'){// if the parameter it's local var
 					char* cmd;
 					cmd = get_lvar_cmd(&(tmp[1][1]));//getting from struck the node with $name and return the cmd
@@ -178,18 +191,16 @@ void execute_pipe(char **buff){
 /*
  * Code for redirection, input,output or both 
  */
-void execute_redirection(char **buff){
+void execute_redirection(char** buff){
 	scout_buff(buff); //checking what redirection contained in our cmd, <,> or <>
 	char* cmd[128];//store the tokes for the cmd
 	char* file[128];//store the tokes for the file
-	int i=0;
-	int j=0;
+	int i,j;
 
 	cmd[0] = NULL;
-	file[0] =  NULL;
+	file[0] = NULL;
 
-	redirection_f = 1; //open the flag for redirection
-   /*
+	/*
 	* 	if we dont have < or > that mean that user type wrong command
 	*	like ls -l <file.txt (<file.txt with out space)
 	*/
@@ -198,72 +209,50 @@ void execute_redirection(char **buff){
 		return;
 	}
 
-	/*
-	 * Action to collect all the tokens for command and file/s
-	 */
-	if(input_redirection_f || append_redirection_f){// if the left most redirection it's input (cmd<file) or it's append (cmd>>file)
-		if(!input_redirection_f && append_redirection_f) input_redirection_index = append_redirection_index; //hacking/overide the input with append index
-		for(i=0;i<input_redirection_index;i++){//extract from buff the command tokens on cmd array
+	redirection_f = 1;//on the flag so we can known on simple cmd that it's simple from redirection
+
+	//if the most left redirection that found it's < (input)
+	if(input_redirection_f){
+
+		//exporting from buffer the cmd
+		for (i = 0; i < input_redirection_index; ++i){
 			cmd[i] = buff[i];
 		}
-		cmd[i]= NULL;
-		i=0;
-		file[i] = buff[input_redirection_index+1];// extract from buff the file tokens on file array => case:  cmd < file
 		
+		cmd[i] = buff[i+1];//and after the last token that adden on cmd the file token (i=input_redirection_index)
+		i++;//moving on next cell that we will add the next token if that exist
+
+		//if the most left redirection toke it's < (input) then we can have later only 1 >(output) or >>(append)
+		if(output_redirection_f){//if we have output
+			assert(!append_redirection_f);//asserting for append
+			cmd[i] = buff[output_redirection_index+1]; //add the name of file that we want to output the command
+			i++;//moving on next free cell for upcoming token
+		}
+
+		//if the most left redirection toke it's < (input) then we can have later only 1 >(output) or >>(append)
+		if(append_redirection_f){//if we have append
+			assert(!output_redirection_f);//asserting for append
+			cmd[i] = buff[append_redirection_index+1]; //add the name of file that we want to append the command
+			i++;
+		}
+		cmd[i] = NULL;//nullifie the cell after the last token so we can known when to stop
+		execute_cmd(cmd);//execute the simple command
+	}else{//we have output or append
+		int index;
+		if(output_redirection_f) index = output_redirection_index;
+		else index = append_redirection_index;
+
+		for(i=0; i<index; ++i){
+			cmd[i] = buff[i];
+		}
+		cmd[i] = buff[i+1];//add the file name on cmd
 		i++;
-		if(output_redirection_f){//extract from buff the file tokens on file array => case: cmd < file1 > file2 or case: cmd>>file1>file2
-		 file[i] = buff[output_redirection_index+1];i++;
-		}
-		file[i]=NULL;
-	}else{// if the left most redirection it's output (cmd>file)
-		for(i=0;i<output_redirection_index;i++){
-			cmd[i] = buff[i];//extracting the command
-		}
-		cmd[i]= NULL;
-
-		i=output_redirection_index+1;// extract the file name on file array
-		j=0;
-		while(buff[i]!=NULL){
-			file[j] = buff[i];
-			i++;
-			j++;
-		}
-		file[j]= NULL;
+		cmd[i] = NULL;
+		cmd[i] = NULL;//nullifie the cell after the last token so we can known when to stop
+		execute_cmd(cmd);//execute the simple command
 	}
-
-
-	/*
-	 * Start running cmd depends on state
-	 */
-	if(input_redirection_f || append_redirection_f){//State 1 : we have input (cmd<file) or stat2: we have append (cmd>>file)
-		i=0;
-		if(!input_redirection_f && append_redirection_f) input_redirection_index = append_redirection_index; //hacking/overide the input with append index
-		
-		while(file[i]!=NULL){ //append pn cmd array the file array
-			cmd[input_redirection_index + i] = file[i];
-			i++;
-		}
-		
-		/*
-		 * State3: we have input/output (cmd<file1>file2)
-		 * State4: we have input/append (cmd<file>>file2)
-		 */
-		if(output_redirection_f || append_redirection_f){
-		  file_redirection_index = input_redirection_index+i-1;
-		  
-		  //printf("file: %s\n",file[0]);
-		  //printf("index: %d\n",file_redirection_index);
-		}
-		cmd[input_redirection_index+i] = NULL;
-		
-		execute_cmd(cmd); //execute the command
-	}else if(!input_redirection_f && output_redirection_f && !append_redirection_f){//State5: we have only output (cmd>file)
-		assert(output_redirection_index>=0);
-		execute_cmd(cmd); //execute the command and get the output from stdout in file
-		output_redirection(file[0]); // open the file with output and the destination file and tranfer the data
-	}else{}
-	
 }
+
 
 /*
  *Code to execute the set var
@@ -361,33 +350,63 @@ void scout_buff(char** buff){
 	}
 }
 
-void input_r(void){
+/*
+ *Call this function to tokenize,parse the data from file when we have input redirection
+ */
+void input_redirection(char* file){
+	char buf[1024];
+	FILE *fp;
+	fp = fopen(file,"r");
 
+	//it's like tokenize that parsing command, we use it to parse file
+	int j = 0;
+	while(fgets(buf,sizeof(buf),fp)!=NULL){
+		buf[strcspn(buf,"\n")] = '\0';
+		char *p, *last;
+		//using the strtok_r to break in token the s each time we found "space"
+		for ((p = strtok_r(buf, " ", &last)); p;(p = strtok_r(NULL, " ", &last))){
+			if (j < LEN(ret) - 1) {
+				ret[j] = strdup(p);//store the token on global token array
+				j++;
+			}
+		}
+		last = ret[j -1];
+		ret[j] = NULL;
+	}
+	fclose(fp);
 }
 
 /*
- * Open 2 files and transfer the data from tempfile to file.
- * tmpfile.txt contain the out from the cmd that runned
+ *Redirection the stdout (1) to the file
  */
 void output_redirection(char* file){
-	FILE *fp1;
-	fp1 = fopen("tempfile.txt","r");// r its for read
-
-	FILE *fp2;
-	fp2 = fopen(file,"w+");// w+ it's for write
-
-	char temp[255];
-
-	while(fgets(temp,sizeof(temp),fp1)!=NULL){//getting the data from tempfile line by line
-		fprintf(fp2,temp);//write it on file
-	}
-	fclose(fp1);//close fp1 and fp2
-	fclose(fp2);
-	remove("tempfile.txt");// removing the temporary file that we create before
+	/*Creating a file descriptor so we can get from fd 1 (stdout)
+	 *the output from execv
+	 *O_WRONLY : open the file for write
+	 *O_CREAT: create the file and open it if isnt exist	
+	 *S_IRUSR: give to user permission to read
+	 *S_IwUSR: give to user permission to write
+	 */
+	int fd = open(file, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
+	dup2(fd,1);
+	close(fd);
 }
 
-void append_r(void){
-
+/*
+ *Redirectio/append the stdout (1) to the file
+ */
+void append_redirection(char* file){
+	/*Creating a file descriptor so we can get from fd 1 (stdout)
+	 *the output from execv
+	 *O_WRONLY : open the file for write
+	 *O_APPEND : open the file for append
+	 *O_CREAT: create the file and open it if isnt exist	
+	 *S_IRUSR: give to user permission to read
+	 *S_IwUSR: give to user permission to write
+	 */
+	 int fd = open(file, O_CREAT | O_WRONLY  | O_APPEND,S_IRUSR | S_IWUSR );
+	 dup2(fd,1);
+	 close(fd);
 }
 
 /*

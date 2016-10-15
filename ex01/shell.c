@@ -145,6 +145,9 @@ void execute_cmd(char **buf){
 		i++;
 	}
 
+	execute_simple(buf);
+	return;
+	
 	//check if we have any simple command 
 	if(strcmp(buf[0],"ls")==0 ||
 	   strcmp(buf[0],"echo")==0 ||
