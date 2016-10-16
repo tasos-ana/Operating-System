@@ -152,10 +152,13 @@ void run_cmd(char** buff){
 	int pid;
 
 		execute_cmd(buff); //check for exit,set,unset,printlvar,cd
-
+		int* pidfd = initialize_pipe(); //init pipe if we have pipe
+		
 		pid = fork();
 
 		if(pid>0){// father, pid = proccess id
+			if(pipe_f) execute_pipe_father_side(buff,pidfd);
+			
 			if(!deamon_f) waitpid(-1,&status,0);//if that flag it's on we dont w8 cause it's deamon proccess
 			else fprintf(stdout, "%s:%d\n",buff[0],pid); //if we come here mean that our proccess are deamon => print the name and pid
 			if(stdout_copy!=-1){
@@ -164,6 +167,8 @@ void run_cmd(char** buff){
 				stdout_copy = -1;
 			}
 		}else if(pid==0){// child
+			if(pipe_f) execute_pipe_child_side(buff,pidfd);
+			
 			if(!execute_redirection_pipe(buff)){//check for |,>,>>,<
 				execute_simple(buff);
 			}

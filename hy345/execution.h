@@ -23,10 +23,17 @@ void execute_simple(char **buff);
  */
 void execute_cd(char **buff);
 
+
+void execute_pipe(char** buff);
+
+
+int* initialize_pipe(void);
 /*
  *Code for pipes
  */
-void execute_pipe(char **buff);
+void execute_pipe_father_side(char **buff,int* pipefd);
+
+void execute_pipe_child_side(char** buff,int* pipefd);
 
 /*
  * Code for redirection, input,output or both 

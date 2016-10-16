@@ -157,11 +157,9 @@ void execute_redirection(char **buff){
 	}
 
 	char* s = merge_tokens(buff);
-	//printf("%s\n",buff[0]);
 	if(append_redirection_f){
 		assert(!output_redirection_f);
 		stdout_copy = dup(1);
-		//close(1);
 		append_redirection_f = 0;
 		cmd = tokenize(s,">>");//export the tokens from buff left,right from'>>'
 		free(s);
@@ -177,7 +175,6 @@ void execute_redirection(char **buff){
 	if(output_redirection_f){
 		assert(!append_redirection_f);
 		stdout_copy = dup(1);
-		//close(1);
 		output_redirection_f = 0;
 		cmd = tokenize(s,">");//export the tokens from buff left,right from'>'
 		s = NULL;
@@ -192,7 +189,7 @@ void execute_redirection(char **buff){
 	if(input_redirection_f){
 		input_redirection_f = 0;
 
-		cmd = tokenize(s,"<");//export the tokens from buff left,right from'<'
+		cmd = tokenize(s,"< ");//export the tokens from buff left,right from'<'
 		free(s);
 		s = NULL;
 		fname = cmd[1];//getting the file name (cmd < file)
@@ -204,13 +201,31 @@ void execute_redirection(char **buff){
 	}
 }
 
+void execute_pipe(char** buff){
+	scout_buff(buff);
+}
 
+int* initialize_pipe(void){
+	if(!pipe_f) return NULL;
+	assert(pipe_f);
+	int* pipefd = malloc(2*sizeof(int));
+
+	if(pipe(pipefd)==-1){
+		perror("pipe");
+		exit(EXIT_FAILURE);
+	}
+	return pipefd;
+}
 
 /*
  *Code for pipes
  */
-void execute_pipe(char **buff){
-	
+void execute_pipe_father_side(char **buff,int* pipefd){
+
+}
+
+void execute_pipe_child_side(char** buff,int* pipefd){
+
 }
 
 /*
