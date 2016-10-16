@@ -129,13 +129,19 @@ void execute_printl_vars(char **buff){
  * Do all the action for a simple commants like ls,mv,rm,cat,sort...
  */
 void execute_simple(char **buff){
-	char bin_path[128];
-	/*
-	 *Calculate the path for simple cmd /bin/cmd
-	 */
-	strcpy(bin_path,"/bin/");
-	strcat(bin_path,buff[0]);
-	execve(bin_path,&buff[0],0);//run the command
+	if(strcmp(buff[0],"echo")==0){//checking if the simple command are the echo
+		if (buff[1]!=NULL){//echo $var (cant be like echo)
+			if(buff[1][0] == '$'){// if the parameter it's local var
+				char* cmd;
+				cmd = get_lvar_cmd(&(buff[1][1]));//getting from struck the node with $name and return the cmd
+				if(cmd!=NULL){
+					fprintf(stdout, "%s\n",cmd);
+					exit(EXIT_SUCCESS); // sending the success signal on father so he can unblocked from wait
+				}
+			}
+		}
+	}
+	execvp(buff[0],&buff[0]);
 }
 
 /*
@@ -145,7 +151,7 @@ void execute_redirection(char **buff){
 	scout_buff(buff);
 	char** cmd;
 	char** input_data;
-	char *fname;
+	char **fname;
 
 	/*
 	* 	if we dont have < or > that mean that user type wrong command
@@ -164,11 +170,11 @@ void execute_redirection(char **buff){
 		cmd = tokenize(s,">>");//export the tokens from buff left,right from'>>'
 		free(s);
 		s = NULL;
-		fname = cmd[1];//getting the file name (cmd < file)
-		append_redirection(fname);
+		fname = tokenize(cmd[1]," ");//getting the file name (cmd < file)
+		append_redirection(fname[0]);
 		cmd[1] = NULL;
-
 		cmd = tokenize(cmd[0]," ");
+		
 		run_cmd(cmd);
 	}
 
@@ -178,8 +184,8 @@ void execute_redirection(char **buff){
 		output_redirection_f = 0;
 		cmd = tokenize(s,">");//export the tokens from buff left,right from'>'
 		s = NULL;
-		fname = cmd[1];//getting the file name (cmd < file)
-		output_redirection(fname);
+		fname = tokenize(cmd[1]," ");//getting the file name (cmd < file)
+		output_redirection(fname[0]);
 		cmd[1] = NULL;
 
 		cmd = tokenize(cmd[0]," ");
@@ -189,11 +195,11 @@ void execute_redirection(char **buff){
 	if(input_redirection_f){
 		input_redirection_f = 0;
 
-		cmd = tokenize(s,"< ");//export the tokens from buff left,right from'<'
+		cmd = tokenize(s,"<");//export the tokens from buff left,right from'<'
 		free(s);
 		s = NULL;
-		fname = cmd[1];//getting the file name (cmd < file)
-		input_data = input_redirection(fname);
+		fname = tokenize(cmd[1]," ");//getting the file name (cmd < file)
+		input_data = input_redirection(fname[0]);
 		cmd[1] = NULL;
 
 		cmd = tokenize(cmd[0]," ");
@@ -221,11 +227,46 @@ int* initialize_pipe(void){
  *Code for pipes
  */
 void execute_pipe_father_side(char **buff,int* pipefd){
+	pipe_f = 0;
+	char** cmd;
 
+	close(pipefd[0]);
+	dup2(pipefd[1],STDOUT_FILENO);
+
+	char* s = merge_tokens(buff);
+	cmd = tokenize(s,"|");//export the tokens from buff left,right from'>'
+	s = NULL;
+	run_cmd(tokenize(cmd[0]," "));
 }
 
 void execute_pipe_child_side(char** buff,int* pipefd){
+	char input;
+	char input_buff[1024];
+	char** cmd;
+	char** tmp;
 
+	close(pipefd[1]);
+	dup2(pipefd[0],STDIN_FILENO);
+
+	char* s = merge_tokens(buff);
+	cmd = tokenize(s,"|");//export the tokens from buff left,right from'>'
+	s = NULL;
+
+	cmd = tokenize(cmd[1]," ");
+
+	while(read(pipefd[0], &input,1) ){
+		write(STDOUT_FILENO,&input,1);
+	}
+	write(STDOUT_FILENO,"\n",1);
+
+	fgets(input_buff,sizeof(input_buff),stdout);
+	input_buff[strcspn(input_buff,"\n")] = '\0';
+
+	tmp = tokenize(input_buff," ");
+
+	cmd = merge_cmd_input(cmd,tmp);
+
+	run_cmd(cmd);
 }
 
 /*
@@ -265,7 +306,6 @@ void output_redirection(char* file){
 	 *S_IRUSR: give to user permission to read
 	 *S_IwUSR: give to user permission to write
 	 */
-	//remove(file);
 	int fd = open(file, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 	dup2(fd,1);
 	close(fd);
