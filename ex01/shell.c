@@ -32,7 +32,7 @@ int input_redirection_f;
 int output_redirection_f;
 int append_redirection_f;
 
-extern int file_redirection_index;
+//extern int file_redirection_index;
 
 /*
  *Displaying the prompt

@@ -61,7 +61,10 @@ void execute_exit(char **buff){
 void execute_simple(char **buff){
 	assert(buff[0]!=NULL);
 	int pid;
+	int pipefd[2];
 	char* tmp[128];
+	char* cmd1[128];
+	char* cmd2[128];
 	int i=0;
 	int j=0;
 	
@@ -70,9 +73,32 @@ void execute_simple(char **buff){
 	 	i++;
 	}
 	tmp[i] = NULL;
-	
+	if(pipe_f){
+		pipe(pipefd);
+		if(pipe(pipefd)==-1){
+			perror("pipe");
+			exit(EXIT_FAILURE);
+		}
+	}
 	pid = fork();
 	if(pid>0){ // pid>0  = father and pid = progress id
+		if(pipe_f){//if we have pipe
+			close(pipefd[0]);
+			for(i=0; i<pipe_index;++i){
+				cmd1[i] = tmp[i];
+			}
+			cmd1[i] = NULL;
+
+			dup2(pipefd[1],STDOUT_FILENO);
+
+			char bin_path[128];
+			/*
+			 *Calculate the path for simple cmd /bin/cmd
+		 	 */
+			strcpy(bin_path,"/bin/");
+			strcat(bin_path,cmd1[0]);
+			execve(bin_path,&cmd1[0],0);//run the command
+		}
 		if(!deamon_f) waitpid(-1,&status,0);	//if that flag it's on we dont w8 cause it's deamon proccess
 		else{
 			fprintf(stdout, "%s:%d\n",tmp[0],pid); //if we come here mean that our proccess are deamon => print the name and pid
@@ -137,7 +163,25 @@ void execute_simple(char **buff){
 			redirection_f = 0; //reset flag
 		}
 		if(pipe_f){
+			printf("%s\n","mpika" );
+			close(pipefd[1]);
+			dup2(pipefd[0],STDIN_FILENO);
 
+			i = 0;
+			j = pipe_index + 1;
+			while(tmp[j]!=NULL){
+				cmd2[i] = tmp[j];
+				i++;
+				j++;
+			}
+			char bin_path[128];
+			/*
+		 	 *Calculate the path for simple cmd /bin/cmd
+			 */
+			strcpy(bin_path,"/bin/");
+			strcat(bin_path,cmd2[0]);
+			execve(bin_path,&cmd2[0],0);//run the command
+			return;
 		}		
 		if(strcmp(tmp[0],"echo")==0){//checking if the simple command are the echo
 			if (tmp[1]!=NULL){//echo $var (cant be like echo)
@@ -189,67 +233,7 @@ void execute_cd(char **buff){
  */
 void execute_pipe(char **buff){
 	scout_buff(buff);
-	int pipefd[2];
-
-	if(pipe(pipefd)==-1){
-		perror("pipe");
-		exit(EXIT_FAILURE);
-	}
-
-	char* cmd1[128];
-	char* cmd2[128];
-
-	int i,j;
-
-	for(i=0; i<pipe_index;++i){
-		cmd1[i] = buff[i];
-	}
-	cmd1[i] = NULL;
-
-	i = 0;
-	j = pipe_index + 1;
-	while(buff[j]!=NULL){
-		cmd2[i] = buff[j];
-		i++;
-		j++;
-	}
-
-	dup2(pipefd[1],1);
-	execute_cmd(cmd1);
-	
-
-	dup2(pipefd[0],0);
-	close(pipefd[1]);
-	execute_cmd(cmd2);
-
-	close(pipefd[0]);
-/*
-	pid_t cpid;
-	char buf;
-
-	
-
-	cpid = fork();
-	if(cpid == -1){
-		perror("fork");
-		exit(EXIT_FAILURE);
-	}
-	if(cpid==0){
-		close(pipefd[1]);
-		while(read(pipefd[0],&buf,1)>0){
-			write(STDOUT_FILENO,&buf,1);
-		}
-		write(STDOUT_FILENO,"\n",1);
-		close(pipefd[0]);
-		exit(EXIT_SUCCESS);
-	}else{
-		close(pipefd[0]);
-		write(pipefd[1],argv[1],strlen(argv[1]));
-		close(pipefd[1]);
-		wait(NULL);
-		exit(EXIT_SUCCESS);
-	}
-*/
+	execute_simple(buff);
 }
 
 /*
