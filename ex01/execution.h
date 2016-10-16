@@ -23,10 +23,17 @@ void execute_simple(char **buff);
  */
 void execute_cd(char **buff);
 
+
+void execute_pipe(char** buff);
+
+
+int* initialize_pipe(void);
 /*
  *Code for pipes
  */
-void execute_pipe(char **buff);
+void execute_pipe_father_side(char **buff,int* pipefd);
+
+void execute_pipe_child_side(char** buff,int* pipefd);
 
 /*
  * Code for redirection, input,output or both 
@@ -56,7 +63,7 @@ void scout_buff(char** buff);
 /*
  *Call this function to tokenize,parse the data from file when we have input redirection
  */
-void input_redirection(char* file);
+char** input_redirection(char* file);
 
 /*
  *Redirection the stdout (1) to the file
@@ -67,6 +74,10 @@ void output_redirection(char* file);
  *Redirectio/append the stdout (1) to the file
  */
 void append_redirection(char* file);
+
+char** merge_cmd_input(char** cmd,char** input_data);
+
+char* merge_tokens(char** buff);
 
 #endif	/* EXECUTION_H*/
 /*

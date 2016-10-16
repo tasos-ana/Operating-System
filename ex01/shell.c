@@ -15,14 +15,13 @@
 #include "shell.h"
 #include "execution.h"
 
-#define TRUE 1
-#define LEN(x) (sizeof(x) / sizeof(*(x)))
+ #define TRUE 1
 
-char *tokens[128];
-char tmp[128];
+extern int stdout_copy;
+
 char* home_dir = NULL;
 
-/*
+ /*
  *Required flags
  */
 int deamon_f;
@@ -32,7 +31,7 @@ int input_redirection_f;
 int output_redirection_f;
 int append_redirection_f;
 
-//extern int file_redirection_index;
+int status;
 
 /*
  *Displaying the prompt
@@ -54,124 +53,134 @@ void display_prompt(void){
 /*
  * Make tokens from speciefied string s
  */
-void tokenize(char *s) { /*tokenization of input arguments*/
-	char *p, *last;
-	int i = 0;
+ char** tokenize(char* s, const char* c){
+ 	char *p,*last;
+ 	int i = 0;
+ 	char** tokens = malloc(128*sizeof(char*));
 
-	for ((p = strtok_r(s, " ", &last)); p;//using the strtok_r to break in token the s each time we found "space"
-	    (p = strtok_r(NULL, " ", &last))) {
-		if (i < LEN(tokens) - 1) {
-			tokens[i] = p;//store the token on global token array
-			i++;
-		}
-	}
-	last = tokens[i-1];
-	if(last[strlen(last)-1] == '&'){//if we are on last token check if the cmd it's deamon
-		strncpy(tmp,last,strlen(last)-1);
-		tokens[i-1] = tmp;
-		deamon_f = 1;//on the deamon flag
-	}
-	tokens[i] = NULL;
-}
+ 	for( (p = strtok_r(s, c, &last)); p; (p = strtok_r(NULL, c, &last)) ){//using the strtok_r to break in token the s each time we found "space"
+ 		tokens[i] = strdup(p);//store the token on global token array
+ 		i++;
+ 	}
+ 	last = tokens[i-1];
+ 	if(last[strlen(last)-1] == '&'){//if we are on last token check if the cmd it's deamon
+ 		char tmp[128];
+ 		strncpy(tmp,last,strlen(last)-1);
+ 		tokens[i-1] = tmp;
+ 		deamon_f = 1;//on the deamon flag
+ 	}
+ 	tokens[i] = NULL;
+
+ 	return tokens;
+ }
 
 /*
  * Read the command and extract tokens from that cmd
  */
-char** parse_command(void){
-	char buf[1024];
+ char** parse_command(void){
+ 	char buff[1024];
 
-	fgets(buf,sizeof(buf),stdin);//read the next line from stdin
-	buf[strcspn(buf,"\n")] = '\0';//strcspn return the length of buff and put on last cell the '\0'
-	tokenize(buf);
-	
-	return tokens;
-}
+ 	fgets(buff,sizeof(buff),stdin);//read the next line from stdin
+ 	buff[strcspn(buff,"\n")] = '\0';
+
+ 	return tokenize(buff," ");
+ }
 
 /*
  * Dispatching each command and call the correct function
  */
-void execute_cmd(char **buf){
-	if(buf[0]==NULL) return;//if just press enter do nothing
+void execute_cmd(char **buff){
+	if(buff[0]==NULL) return;//if just press enter do nothing
 	
 	//if cmd = exit
-	if(strcmp(buf[0],"exit")==0){
-		execute_exit(buf);
+	if(strcmp(buff[0],"exit")==0){
+		execute_exit(buff);
 		return;
 	}
 
  	//if cmd = unset
-	if(strcmp(buf[0],"unset")==0){
-		execute_unset_var(buf);
+	if(strcmp(buff[0],"unset")==0){
+		execute_unset_var(buff);
 		return;
 	}
 
 	//if cmd = set
-	if(strcmp(buf[0],"set")==0){
-		execute_set_var(buf);
+	if(strcmp(buff[0],"set")==0){
+		execute_set_var(buff);
 		return;
 	}
 
 	//if cmd = printlvar
-	if(strcmp(buf[0],"printlvar")==0){
-		execute_printl_vars(buf);
+	if(strcmp(buff[0],"printlvar")==0){
+		execute_printl_vars(buff);
 		return;
 	}
 
 	//if cmd = cd
-	if(strcmp(buf[0],"cd")==0){
-		execute_cd(buf);
+	if(strcmp(buff[0],"cd")==0){
+		execute_cd(buff);
 		return;
 	}
+}
 
-	//check if we are on cmd with redirection or pipe
+//check for |,>,>>,<
+int execute_redirection_pipe(char** buff){
 	int i=0;
-	while(buf[i]!=NULL){
-		if(strstr(buf[i],"|")!=NULL){
-      		execute_pipe(buf);
-      		return;
+	while(buff[i]!=NULL){
+		if(strstr(buff[i],"|")!=NULL){
+      		execute_pipe(buff);
+      		return 1;
    		}
-    	if(strstr(buf[i],"<")!=NULL){
-      		execute_redirection(buf);
-      		return;
+   		if(strstr(buff[i],"<<")!=NULL){
+      		execute_redirection(buff);
+      		return 1;
     	}
-    	if(strstr(buf[i],">")!=NULL){
-      		execute_redirection(buf);
-      		return;
+    	if(strstr(buff[i],">")!=NULL){
+      		execute_redirection(buff);
+      		return 1;
     	}
-    	if(strstr(buf[i],"<<")!=NULL){
-      		execute_redirection(buf);
-      		return;
+    	if(strstr(buff[i],"<")!=NULL){
+      		execute_redirection(buff);
+      		return 1;
     	}
 		i++;
 	}
-
-	execute_simple(buf);
-	return;
-	
-	//check if we have any simple command 
-	if(strcmp(buf[0],"ls")==0 ||
-	   strcmp(buf[0],"echo")==0 ||
-	   strcmp(buf[0],"cat")==0 ||
-	   strcmp(buf[0],"mv")==0 ||
-	   strcmp(buf[0],"rm")==0 ||
-	   strcmp(buf[0],"cp")==0 ||
-	   strcmp(buf[0],"sort")==0 ||
-	   strcmp(buf[0],"head")==0 ||
-	   strcmp(buf[0],"grep")==0 ||
-	   strcmp(buf[0],"mkdir")==0)
-	{
-		execute_simple(buf);
-		return;
-	}
-
-	//msg for incorect cmd
-	fprintf(stderr, "The command it's wrong.\n" );
+	return 0;
 }
 
-int main(int argc, char const *argv[]){
+void run_cmd(char** buff){
+	int pid;
+
+		execute_cmd(buff); //check for exit,set,unset,printlvar,cd
+		int* pidfd = initialize_pipe(); //init pipe if we have pipe
+		
+		pid = fork();
+
+		if(pid>0){// father, pid = proccess id
+			if(pipe_f) execute_pipe_father_side(buff,pidfd);
+			
+			if(!deamon_f) waitpid(-1,&status,0);//if that flag it's on we dont w8 cause it's deamon proccess
+			else fprintf(stdout, "%s:%d\n",buff[0],pid); //if we come here mean that our proccess are deamon => print the name and pid
+			if(stdout_copy!=-1){
+				dup2(stdout_copy, 1);
+				close(stdout_copy);
+				stdout_copy = -1;
+			}
+		}else if(pid==0){// child
+			if(pipe_f) execute_pipe_child_side(buff,pidfd);
+			
+			if(!execute_redirection_pipe(buff)){//check for |,>,>>,<
+				execute_simple(buff);
+			}
+			exit(EXIT_SUCCESS);
+		}else{
+			perror("Fork failed\n");
+		}
+}
+
+ int main(int argc, char const *argv[]){
 	char** buff;
 	while(TRUE){
-
 		//init the flag = false/0/off
 		deamon_f = 0;
 		redirection_f = 0;
@@ -179,14 +188,22 @@ int main(int argc, char const *argv[]){
 		input_redirection_f = 0;
 		output_redirection_f = 0;
 		append_redirection_f = 0;
+		stdout_copy = -1;
 
 		display_prompt(); /*display prompt on screen*/
 
 		buff = parse_command(); /*read input from terminal*/
 
-		execute_cmd(buff); //start running the cmds
-
+		run_cmd(buff);
 	}
+	int i=0;
+	while(buff[i]!=NULL){
+		free(buff[i]);
+		buff[i] = NULL;
+		i++;
+	}
+	free(buff);
+	buff = NULL;
 	return 0;
 }
 

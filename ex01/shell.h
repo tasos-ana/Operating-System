@@ -16,17 +16,24 @@ void display_prompt(void);
 /*
  * Make tokens from speciefied string s
  */
-void tokenize(char *s);
+char** tokenize(char *s,const char* c);
 
 /*
  * Read the command and extract tokens from that cmd
  */
 char** parse_command(void);
 
+void run_cmd(char** buff);
+
 /*
  * Dispatching each command and call the correct function
  */
-void execute_cmd(char** buf);
+void execute_cmd(char** buff);
+
+/*
+ *check for |,>,>>,<
+ */
+int execute_redirection_pipe(char** buff);
 
 #endif	/* SHELL_H*/
 
