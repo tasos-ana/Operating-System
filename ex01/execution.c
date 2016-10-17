@@ -32,13 +32,6 @@ extern int pipe_f;
 
 extern char** tokenize(char *s,const char* c);
 
-int input_redirection_index = -1; //the number of token that found '<' on redirection cmd
-int output_redirection_index = -1;//the number of token that found '>' on redirection cmd
-int append_redirection_index = -1;//the number of token that found '>>' on redirection cmd
-int pipe_index = -1;//the number of token that found '|' on redirection cmd
-int pipe_cmd = 0;//0 for left command and 1 for right
-int file_redirection_index = -1; ////the number of token that we add the file name for double redirection '<' '>' or '<' '>>'
-
 int stdout_copy = -1;
 
 /* 	Do all the action to exit from prompt
@@ -98,7 +91,6 @@ void execute_set_var(char **buff){
   }
 }
 
-
  /*
   *Code to execute the unset var
   */
@@ -148,7 +140,6 @@ void execute_simple(char **buff){
  * Code for redirection, input,output or both 
  */
 void execute_redirection(char **buff){
-	scout_buff(buff);
 	char** cmd;
 	char** input_data;
 	char **fname;
@@ -209,64 +200,51 @@ void execute_redirection(char **buff){
 
 void execute_pipe(char** buff){
 	scout_buff(buff);
-}
+	if(!pipe_f) perror("pipe syntax");
+	int pipefd[2];
+	pid_t cpid;
+	char** cmd;
 
-int* initialize_pipe(void){
-	if(!pipe_f) return NULL;
-	assert(pipe_f);
-	int* pipefd = malloc(2*sizeof(int));
+	char* s = merge_tokens(buff);
+
+	cmd = tokenize(s ,"|");
 
 	if(pipe(pipefd)==-1){
 		perror("pipe");
 		exit(EXIT_FAILURE);
 	}
-	return pipefd;
-}
 
-/*
- *Code for pipes
- */
-void execute_pipe_father_side(char **buff,int* pipefd){
-	pipe_f = 0;
-	char** cmd;
-
-	close(pipefd[0]);
-	dup2(pipefd[1],STDOUT_FILENO);
-
-	char* s = merge_tokens(buff);
-	cmd = tokenize(s,"|");//export the tokens from buff left,right from'>'
-	s = NULL;
-	run_cmd(tokenize(cmd[0]," "));
-}
-
-void execute_pipe_child_side(char** buff,int* pipefd){
-	char input;
-	char input_buff[1024];
-	char** cmd;
-	char** tmp;
-
-	close(pipefd[1]);
-	dup2(pipefd[0],STDIN_FILENO);
-
-	char* s = merge_tokens(buff);
-	cmd = tokenize(s,"|");//export the tokens from buff left,right from'>'
-	s = NULL;
-
-	cmd = tokenize(cmd[1]," ");
-
-	while(read(pipefd[0], &input,1) ){
-		write(STDOUT_FILENO,&input,1);
+	cpid = fork();
+	if(cpid == -1){
+		perror("fork");
+		exit(EXIT_FAILURE);
 	}
-	write(STDOUT_FILENO,"\n",1);
+	if(cpid==0){//child---- cmd2
+		close(pipefd[1]);
 
-	fgets(input_buff,sizeof(input_buff),stdout);
-	input_buff[strcspn(input_buff,"\n")] = '\0';
+		char** tmp = tokenize(cmd[1]," ");
+		FILE* fdp = fdopen(pipefd[0],"r");
+		while(1){
+			char input_buff[1024];
+			if(fgets(input_buff,sizeof(input_buff)-1,(FILE*)fdp)==NULL) break;
+			input_buff[strcspn(input_buff,"\n")] = '\0';
+ 			tmp = cmd_add_input(tmp,input_buff);
+		}
 
-	tmp = tokenize(input_buff," ");
+ 		execute_simple(tmp);
+ 		fclose(fdp);
+		close(pipefd[0]);
+		exit(EXIT_SUCCESS);
+	}else{//father ---- cmd1
+		close(pipefd[0]);
+		dup2(pipefd[1],STDOUT_FILENO);
 
-	cmd = merge_cmd_input(cmd,tmp);
+		execute_simple(tokenize(cmd[0]," "));
+		close(pipefd[1]);
+		waitpid(-1,&status,0)
+		exit(EXIT_SUCCESS);
+	}
 
-	run_cmd(cmd);
 }
 
 /*
@@ -301,12 +279,12 @@ char** input_redirection(char* file){
 void output_redirection(char* file){
 	/*Creating a file descriptor so we can get from fd 1 (stdout)
 	 *the output from execv
-	 *O_WRONLY : open the file for write
+	 *O_RDWR : open the file for write,read
 	 *O_CREAT: create the file and open it if isnt exist	
 	 *S_IRUSR: give to user permission to read
 	 *S_IwUSR: give to user permission to write
 	 */
-	int fd = open(file, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+	int fd = open(file, O_RDWR | O_CREAT, S_IRUSR | S_IWUSR);
 	dup2(fd,1);
 	close(fd);
 }
@@ -317,13 +295,13 @@ void output_redirection(char* file){
 void append_redirection(char* file){
 	/*Creating a file descriptor so we can get from fd 1 (stdout)
 	 *the output from execv
-	 *O_WRONLY : open the file for write
+	 *O_RDWR : open the file for write,read
 	 *O_APPEND : open the file for append
 	 *O_CREAT: create the file and open it if isnt exist	
 	 *S_IRUSR: give to user permission to read
 	 *S_IwUSR: give to user permission to write
 	 */
-	 int fd = open(file, O_CREAT | O_WRONLY  | O_APPEND,S_IRUSR | S_IWUSR );
+	 int fd = open(file, O_CREAT | O_RDWR  | O_APPEND,S_IRUSR | S_IWUSR );
 	 dup2(fd,1);
 	 close(fd);
 }
@@ -341,27 +319,23 @@ void scout_buff(char** buff){
 				input_redirection_f  =0;
 				output_redirection_f =0;
 				append_redirection_f =0;
-				pipe_f = 0;
 				return;
 			}
 			input_redirection_f = 1;//on the flag that we found input
-			input_redirection_index = i;// where we found it
+
 		}
 		if( (tmp = strstr(buff[i],">")) != NULL){
 			if( (strlen(tmp)==2) && strcmp(tmp,">>")==0){
-				append_redirection_f = 1;//on the flag that we found append
-				append_redirection_index = i;//where we found it
+				append_redirection_f = 1;//on the flag that we found appendre we found it
 				i++;
 			}
 			else if(strlen(tmp)!=1){
 				input_redirection_f  =0;
 				output_redirection_f =0;
 				append_redirection_f =0;
-				pipe_f = 0;
 				return;
 			}else{
 				output_redirection_f = 1;//on the flag that we found output
-				output_redirection_index = i;// where we found i
 			}
 		}if( (tmp = strstr(buff[i],"|"))!=NULL ){
 			if(strlen(tmp)!=1){
@@ -372,7 +346,6 @@ void scout_buff(char** buff){
 				return;
 			}
 			pipe_f = 1;
-			pipe_index = i;
 		}
 		i++;
 	}
@@ -381,7 +354,6 @@ void scout_buff(char** buff){
 char** merge_cmd_input(char** cmd,char** input_data){
 	int i;
 	while(cmd[i]!=NULL){
-		//printf("%s\n",cmd[i]);
 		i++;
 	}
 	int j = 0;
@@ -405,6 +377,18 @@ char* merge_tokens(char** buff){
 		i++;
 	}
 	return s;
+}
+
+
+char** cmd_add_input(char** cmd, char* input){
+	int i = 0;
+	while(cmd[i]!=NULL){
+		i++;
+	}
+	cmd[i] = strdup(input);
+	cmd[i+1] = NULL;
+
+	return cmd;
 }
 
 /*

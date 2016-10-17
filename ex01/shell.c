@@ -26,8 +26,7 @@ char* home_dir = NULL;
  */
 int deamon_f;
 int redirection_f;
-int pipe_f;
-int input_redirection_f;
+int pipe_f;int input_redirection_f;
 int output_redirection_f;
 int append_redirection_f;
 
@@ -56,7 +55,7 @@ void display_prompt(void){
  char** tokenize(char* s, const char* c){
  	char *p,*last;
  	int i = 0;
- 	char** tokens = malloc(128*sizeof(char*));
+ 	char** tokens = malloc(256*sizeof(char*));
 
  	for( (p = strtok_r(s, c, &last)); p; (p = strtok_r(NULL, c, &last)) ){//using the strtok_r to break in token the s each time we found "space"
  		tokens[i] = strdup(p);//store the token on global token array
@@ -152,13 +151,9 @@ void run_cmd(char** buff){
 	int pid;
 
 		execute_cmd(buff); //check for exit,set,unset,printlvar,cd
-		int* pidfd = initialize_pipe(); //init pipe if we have pipe
-		
+		scout_buff(buff);
 		pid = fork();
-
 		if(pid>0){// father, pid = proccess id
-			if(pipe_f) execute_pipe_father_side(buff,pidfd);
-			
 			if(!deamon_f) waitpid(-1,&status,0);//if that flag it's on we dont w8 cause it's deamon proccess
 			else fprintf(stdout, "%s:%d\n",buff[0],pid); //if we come here mean that our proccess are deamon => print the name and pid
 			if(stdout_copy!=-1){
@@ -167,8 +162,6 @@ void run_cmd(char** buff){
 				stdout_copy = -1;
 			}
 		}else if(pid==0){// child
-			if(pipe_f) execute_pipe_child_side(buff,pidfd);
-			
 			if(!execute_redirection_pipe(buff)){//check for |,>,>>,<
 				execute_simple(buff);
 			}
@@ -195,12 +188,12 @@ void run_cmd(char** buff){
 		buff = parse_command(); /*read input from terminal*/
 
 		run_cmd(buff);
-	}
-	int i=0;
-	while(buff[i]!=NULL){
-		free(buff[i]);
-		buff[i] = NULL;
-		i++;
+		int i=0;
+		while(buff[i]!=NULL){
+			free(buff[i]);
+			buff[i] = NULL;
+			i++;
+		}
 	}
 	free(buff);
 	buff = NULL;
