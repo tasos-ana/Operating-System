@@ -19,7 +19,6 @@
 
 
 extern char* home_dir;
-extern int status;
 
 /*Flags that defined on file shell.c
  */
@@ -198,51 +197,48 @@ void execute_redirection(char **buff){
 	}
 }
 
+
 void execute_pipe(char** buff){
-	scout_buff(buff);
+	scout_buff(buff);//scout buffer and check if we have | and with  <space>|<space>
 	if(!pipe_f) perror("pipe syntax");
+
 	int pipefd[2];
 	pid_t cpid;
 	char** cmd;
+	int status;
 
-	char* s = merge_tokens(buff);
+	char* s = merge_tokens(buff);//merging all the tokens to export the cmd1 and cmd2 on cmd[char*]
 
 	cmd = tokenize(s ,"|");
 
-	if(pipe(pipefd)==-1){
+	if(pipe(pipefd)==-1){//creating the pipe and checking for errors
 		perror("pipe");
 		exit(EXIT_FAILURE);
 	}
 
+ 	/*
+ 	* The basic idea is that we make one fork for pipe
+ 	* on child side redirect the stdout to the pipefd[0] and exec the cmd1
+	* on father side waiting the cmd1 to end, and then redirecto the pipe output on stdin and run cmd2
+	*/
 	cpid = fork();
-	if(cpid == -1){
-		perror("fork");
-		exit(EXIT_FAILURE);
-	}
-	if(cpid==0){//child---- cmd2
-		close(pipefd[1]);
 
-		char** tmp = tokenize(cmd[1]," ");
-		FILE* fdp = fdopen(pipefd[0],"r");
-		while(1){
-			char input_buff[1024];
-			if(fgets(input_buff,sizeof(input_buff)-1,(FILE*)fdp)==NULL) break;
-			input_buff[strcspn(input_buff,"\n")] = '\0';
- 			tmp = cmd_add_input(tmp,input_buff);
-		}
-
- 		execute_simple(tmp);
- 		fclose(fdp);
-		close(pipefd[0]);
-		exit(EXIT_SUCCESS);
-	}else{//father ---- cmd1
-		close(pipefd[0]);
+	if(cpid==0){//child
 		dup2(pipefd[1],STDOUT_FILENO);
-
-		execute_simple(tokenize(cmd[0]," "));
+		close(pipefd[0]);
 		close(pipefd[1]);
-		waitpid(-1,&status,0)
+
+		run_cmd(tokenize(cmd[0]," "));
 		exit(EXIT_SUCCESS);
+
+	}else if(cpid>0){//father
+		waitpid(cpid,&status,0);
+		dup2(pipefd[0],STDIN_FILENO);
+		close(pipefd[1]);
+		close(pipefd[0]);
+		run_cmd(tokenize(cmd[1]," "));
+	}else{
+		perror("pipe fork failed");
 	}
 
 }
@@ -351,6 +347,9 @@ void scout_buff(char** buff){
 	}
 }
 
+/*
+ *Getting two tokens arrays and merge it in one
+ */
 char** merge_cmd_input(char** cmd,char** input_data){
 	int i;
 	while(cmd[i]!=NULL){
@@ -367,6 +366,9 @@ char** merge_cmd_input(char** cmd,char** input_data){
 	return cmd;
 }
 
+/*
+ * Export in a string all the tokens from the buff
+ */
 char* merge_tokens(char** buff){
 	char *s = malloc(1024*sizeof(char));
 	int i = 1;
@@ -377,18 +379,6 @@ char* merge_tokens(char** buff){
 		i++;
 	}
 	return s;
-}
-
-
-char** cmd_add_input(char** cmd, char* input){
-	int i = 0;
-	while(cmd[i]!=NULL){
-		i++;
-	}
-	cmd[i] = strdup(input);
-	cmd[i+1] = NULL;
-
-	return cmd;
 }
 
 /*

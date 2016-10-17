@@ -65,11 +65,15 @@ void output_redirection(char* file);
  */
 void append_redirection(char* file);
 
+/*
+ *Getting two tokens arrays and merge it in one
+ */
 char** merge_cmd_input(char** cmd,char** input_data);
 
+/*
+ * Export in a string all the tokens from the buff
+ */
 char* merge_tokens(char** buff);
-
-char** cmd_add_input(char** cmd, char* input);
 
 #endif	/* EXECUTION_H*/
 /*

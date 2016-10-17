@@ -188,6 +188,8 @@ void run_cmd(char** buff){
 		buff = parse_command(); /*read input from terminal*/
 
 		run_cmd(buff);
+
+		//Free buff because we make it with malloc
 		int i=0;
 		while(buff[i]!=NULL){
 			free(buff[i]);
