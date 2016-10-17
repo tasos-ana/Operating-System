@@ -1,0 +1,46 @@
+Normal Commands:
+1) cd
+2) ls
+3) ls -l
+4) ls -a -l
+5) cat file.txt
+6) sort -r -o output.txt file_to_sort.txt
+7) set var="ls" (set var=ls)
+8) set var="ls -l"
+ 8.1) $var (ektelei oti exei h var -> ls -l)
+9) printlvar
+10) unset var
+11) exit
+12) set tmp=ls -l  (Einai suntaktika lathos!)
+
+13) set var="ls -l | grep key" (key -> ena string)
+14) $var
+15) echo $var
+
+16) ls -al &
+
+Redirection:
+input:
+	1) sort < file_list.txt
+	2) cat < input.txt
+
+output:
+	1) ls > file_list.txt
+	2) ls -l > output.txt
+
+append:
+	1) ls >> file_list.txt
+
+mix:
+	1) cat < input.txt > output.txt
+	2) cat < input.txt | grep "hello"
+	3) cat output1.txt | grep "hello" > output2.txt
+	4) cat < output1.txt | grep "hello" > output2.txt
+
+Pipes:
+1) ls -l | grep key   (opou key bazeis kati)
+2) ps axl | grep zombie
+3) ps axl | grep zombie > output.txt
+4) ls | grep ".c"
+
+
