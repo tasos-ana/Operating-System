@@ -17,7 +17,6 @@
 #include "execution.h"
 #include "datastructs.h"
 
-
 extern char* home_dir;
 
 /*Flags that defined on file shell.c
@@ -28,6 +27,7 @@ extern int input_redirection_f;
 extern int output_redirection_f;
 extern int append_redirection_f;
 extern int pipe_f;
+extern int var_f;
 
 extern char** tokenize(char *s,const char* c);
 
@@ -76,6 +76,7 @@ void execute_set_var(char **buff){
 
   int i = 2;
   while(buff[i]!=NULL){
+  	strcat(cmd," ");
   	strcat(cmd,buff[i]);
   	i++;
   }
@@ -297,7 +298,7 @@ void append_redirection(char* file){
 	 *S_IRUSR: give to user permission to read
 	 *S_IwUSR: give to user permission to write
 	 */
-	 int fd = open(file, O_CREAT | O_RDWR  | O_APPEND,S_IRUSR | S_IWUSR );
+	 int fd = open(file, O_CREAT | O_APPEND , S_IRUSR | S_IWUSR );
 	 dup2(fd,1);
 	 close(fd);
 }
@@ -342,6 +343,10 @@ void scout_buff(char** buff){
 				return;
 			}
 			pipe_f = 1;
+		}
+		if( (tmp = strstr(buff[i],"$"))!=NULL){
+			var_f = 1;
+			return;
 		}
 		i++;
 	}

@@ -10,4 +10,4 @@ gdb:
 	gcc -g shell.c execution.c datastructs.c
 
 clean:
-	rm -rf ./a.out ./cs345sh
+	rm -rf a.out cs345sh

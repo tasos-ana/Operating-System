@@ -28,12 +28,14 @@ void run_cmd(char** buff);
 /*
  * Dispatching each command and call the correct function
  */
-void execute_cmd(char** buff);
+int execute_cmd(char** buff);
 
 /*
  *check for |,>,>>,<
  */
 int execute_redirection_pipe(char** buff);
+
+void destroy_buff(char** buff);
 
 #endif	/* SHELL_H*/
 

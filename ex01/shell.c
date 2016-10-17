@@ -29,6 +29,7 @@ int redirection_f;
 int pipe_f;int input_redirection_f;
 int output_redirection_f;
 int append_redirection_f;
+int var_f;
 
 int status;
 
@@ -88,38 +89,39 @@ void display_prompt(void){
 /*
  * Dispatching each command and call the correct function
  */
-void execute_cmd(char **buff){
+int execute_cmd(char **buff){
 	if(buff[0]==NULL) return;//if just press enter do nothing
 	
 	//if cmd = exit
 	if(strcmp(buff[0],"exit")==0){
 		execute_exit(buff);
-		return;
+		return 1;
 	}
 
  	//if cmd = unset
 	if(strcmp(buff[0],"unset")==0){
 		execute_unset_var(buff);
-		return;
+		return 1;
 	}
 
 	//if cmd = set
 	if(strcmp(buff[0],"set")==0){
 		execute_set_var(buff);
-		return;
+		return 1;
 	}
 
 	//if cmd = printlvar
 	if(strcmp(buff[0],"printlvar")==0){
 		execute_printl_vars(buff);
-		return;
+		return 1;
 	}
 
 	//if cmd = cd
 	if(strcmp(buff[0],"cd")==0){
 		execute_cd(buff);
-		return;
+		return 1;
 	}
+	return 0;
 }
 
 //check for |,>,>>,<
@@ -149,29 +151,55 @@ int execute_redirection_pipe(char** buff){
 
 void run_cmd(char** buff){
 	int pid;
+	if(execute_cmd(buff)) return; //check for exit,set,unset,printlvar,cd
+	scout_buff(buff);
+	char* cmd;
+	char** tmp;
 
-		execute_cmd(buff); //check for exit,set,unset,printlvar,cd
-		scout_buff(buff);
-		pid = fork();
-		if(pid>0){// father, pid = proccess id
-			if(!deamon_f) waitpid(-1,&status,0);//if that flag it's on we dont w8 cause it's deamon proccess
-			else fprintf(stdout, "%s:%d\n",buff[0],pid); //if we come here mean that our proccess are deamon => print the name and pid
-			if(stdout_copy!=-1){
-				dup2(stdout_copy, 1);
-				close(stdout_copy);
-				stdout_copy = -1;
-			}
-		}else if(pid==0){// child
-			if(!execute_redirection_pipe(buff)){//check for |,>,>>,<
-				execute_simple(buff);
-			}
-			exit(EXIT_SUCCESS);
-		}else{
-			perror("Fork failed\n");
+	/*
+	 *if we have $var getting the cmd from var, replace \" and replace buff with that cmd
+	 */
+	if(var_f){
+		char* s = merge_tokens(buff);
+		buff = tokenize(s,"$");
+		cmd = (char*)get_lvar_cmd(buff[0]);
+
+		if(cmd == NULL) perror("var isnt exist");
+		destroy_buff(buff);
+		tmp = tokenize(cmd,"\"");
+		buff = tokenize(tmp[0]," ");
+		destroy_buff(tmp);
+	}
+
+	pid = fork();
+	if(pid>0){// father, pid = proccess id
+		if(!deamon_f) waitpid(-1,&status,0);//if that flag it's on we dont w8 cause it's deamon proccess
+		else fprintf(stdout, "%s:%d\n",buff[0],pid); //if we come here mean that our proccess are deamon => print the name and pid
+		if(stdout_copy!=-1){
+			dup2(stdout_copy, 1);
+			close(stdout_copy);
+			stdout_copy = -1;
 		}
+	}else if(pid==0){// child
+		if(!execute_redirection_pipe(buff)){//check for |,>,>>,<
+			execute_simple(buff);
+		}
+		exit(EXIT_SUCCESS);
+	}else{
+		perror("Fork failed\n");
+	}
 }
 
- int main(int argc, char const *argv[]){
+void destroy_buff(char** buff){
+	int i=0;
+	while(buff[i]!=NULL){
+		free(buff[i]);
+		buff[i] = NULL;
+		i++;
+	}
+}
+
+int main(int argc, char const *argv[]){
 	char** buff;
 	while(TRUE){
 		//init the flag = false/0/off
@@ -181,6 +209,7 @@ void run_cmd(char** buff){
 		input_redirection_f = 0;
 		output_redirection_f = 0;
 		append_redirection_f = 0;
+		var_f = 0;
 		stdout_copy = -1;
 
 		display_prompt(); /*display prompt on screen*/
@@ -190,12 +219,7 @@ void run_cmd(char** buff){
 		run_cmd(buff);
 
 		//Free buff because we make it with malloc
-		int i=0;
-		while(buff[i]!=NULL){
-			free(buff[i]);
-			buff[i] = NULL;
-			i++;
-		}
+		if(!deamon_f)destroy_buff(buff);
 	}
 	free(buff);
 	buff = NULL;
