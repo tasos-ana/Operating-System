@@ -9,10 +9,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define KYEL "\x1B[33m"
-#define KNRM "\x1B[0m"
+#define ZERO "\x1B[0m"
+#define ONE "\x1B[31m"
 
-int table_print_range = 0;
+int print_range_row = 0;
+int print_range_col = 0;
 
 //Creating new life table
 int** create_life_table(void){
@@ -39,7 +40,12 @@ void init_life_table(int** table, const char* filename){
 	for(i=0; i<100; ++i){
 		for(j=0; j<100; ++j){
 			fscanf(myFile,"%d",&table[i][j]);
-			if(table[i][j] == 1) table_print_range = i;
+			if(table[i][j] == 1) {
+				print_range_row = i;
+				if(print_range_col<j){
+					print_range_col = j;
+				}
+			}
 		}
 	}
 
@@ -50,19 +56,22 @@ void init_life_table(int** table, const char* filename){
 void print_life_table(int** table){
 	assert(table!=NULL);
 
-	int i,j,num, curr_range;
-	curr_range = table_print_range + 4;
-	if(curr_range>=100) curr_range = 100;
-	for(i=0; i<curr_range; ++i){
-		for(j=0; j<100; ++j){
+	int i,j,num, curr_range_row,curr_range_col;
+
+	curr_range_row = print_range_row + 5;
+	curr_range_col = print_range_col + 5;
+
+	if(curr_range_row>=100) curr_range_row = 100;
+	if(curr_range_col>=100) curr_range_col = 100;
+	for(i=0; i<curr_range_row; ++i){
+		for(j=0; j<curr_range_col; ++j){
 			num = table[i][j];
 			if(num){
-				printf("%s%d",KYEL,num);
-				table_print_range = i;
+				printf("%s%d",ONE,num);
 			}
-			else printf("%s%d",KNRM,num);
+			else printf("%s%d",ZERO,num);
 		}
-		printf("%s\n",KNRM);
+		printf("%s\n",ZERO);
 	}
 }
 

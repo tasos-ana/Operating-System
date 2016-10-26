@@ -18,7 +18,11 @@
 
 #define TRUE 1
 
+extern print_range_row;
+extern print_range_col;
+
 int** life_table;
+int** new_generation_table;
 static int thread_counter = 0 ;
 
 static pthread_mutex_t spawn_mutex;//Use that mutex each time that spawn new thread so we can read function input before change
@@ -68,7 +72,7 @@ void spawn_threads(void){
 //Function that called from each thread
 void* thread_function(void* arg){
 	int threadID;
-	int* num,i,j;
+	int* num,i,j,new_state;
 
 	threadID = (int) arg;//get the thread id so we can extract coordinates
 	num = convert_threadID_coordinates(threadID);
@@ -76,24 +80,39 @@ void* thread_function(void* arg){
 
 	while(TRUE){
 		sem_wait(&new_generation_semaphore);//waiting for new generation
-		for(i=num[0]; i<num[0]+10; ++i){//start checking the edge's of the 10x10 table that thread it's resposible, because for that we need critical region
+
+		
+
+		/*for(i=num[0]; i<num[0]+10; ++i){//start checking the edge's of the 10x10 table that thread it's resposible, because for that we need critical region
 			pthread_mutex_lock(&critical_region);//try to enter critical region to check element
-			life_table[i][num[1]] = dead_or_alive(i,num[1]);//make change on top row
-			life_table[i][num[1]+9] = dead_or_alive(i,num[1]+9);//make change on bottom row
+			new_generation_table[i][num[1]] = dead_or_alive(i,num[1]);//make change on top row
+			new_generation_table[i][num[1]+9] = dead_or_alive(i,num[1]+9);//make change on bottom row
 			pthread_mutex_unlock(&critical_region);//exit from critical region
 		}
 
 		for(j=num[1]+1; j<num[1]+9; ++j){//checking tha right and left columns on edge
 			pthread_mutex_lock(&critical_region);//try to enter critical region to check element
-			life_table[num[0]][j] = dead_or_alive(num[0],j);//left side
-			life_table[num[0]+9][j] = dead_or_alive(num[0]+9,j);//right side
+			new_generation_table[num[0]][j] = dead_or_alive(num[0],j);//left side
+			new_generation_table[num[0]+9][j] = dead_or_alive(num[0]+9,j);//right side
 			pthread_mutex_unlock(&critical_region);//exit from critixal region
-		}
+		}*/
 
 		//check all the inner table 8x8
-		for(i=num[0]+1; i<num[0]+9; ++i){
-			for(j=num[1]+1; j<num[1]+9; ++j){
-				life_table[i][j] = dead_or_alive(i,j);
+		for(i=num[0]; i<num[0]+10; ++i){
+			for(j=num[1]; j<num[1]+10; ++j){
+				new_state = dead_or_alive(i,j);
+				if(new_state){
+					pthread_mutex_lock(&critical_region);//try to enter critical region to check element
+					if(print_range_row<i){
+						print_range_row = i;
+					}
+
+					if(print_range_col<j){
+						print_range_col = j;
+					}
+					pthread_mutex_unlock(&critical_region);//exit from critical region
+				}
+				new_generation_table[i][j] = new_state; 
 			}
 		}
 
@@ -155,6 +174,7 @@ int main(int argc, char const *argv[])
 
 	if(argc==2){
 		life_table = create_life_table();//create the table
+		new_generation_table = create_life_table();//create the table
 		init_life_table(life_table,argv[1]);//read the data and store it on table
 	}else{
 		fprintf(stderr, "Please give the input file with run command like './a.out test.txt'\n" );
@@ -171,13 +191,18 @@ int main(int argc, char const *argv[])
 		system("clear");
 		print_life_table(life_table);
 		sleep(1);
-		system("clear");
 
 		//new generation performed and unlock the 100 threads
 		for(i=0;i<100;++i) sem_post(&new_generation_semaphore);
 
 		//wait the threads to complete and get signal from the last complete thread
 		sem_wait(&thread_complete_semaphore);
+
+		for(i=0;i<100;++i){
+			for(j=0;j<100;++j){
+				life_table[i][j] = new_generation_table[i][j];
+			}
+		}
 
 		//unblock the rest threads and let the me known that all threads completed
 		for(i=0;i<100;++i) sem_post(&generation_end_semaphore);
