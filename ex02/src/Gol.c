@@ -80,36 +80,19 @@ void* thread_function(void* arg){
 
 	while(TRUE){
 		sem_wait(&new_generation_semaphore);//waiting for new generation
-
-		
-
-		/*for(i=num[0]; i<num[0]+10; ++i){//start checking the edge's of the 10x10 table that thread it's resposible, because for that we need critical region
-			pthread_mutex_lock(&critical_region);//try to enter critical region to check element
-			new_generation_table[i][num[1]] = dead_or_alive(i,num[1]);//make change on top row
-			new_generation_table[i][num[1]+9] = dead_or_alive(i,num[1]+9);//make change on bottom row
-			pthread_mutex_unlock(&critical_region);//exit from critical region
-		}
-
-		for(j=num[1]+1; j<num[1]+9; ++j){//checking tha right and left columns on edge
-			pthread_mutex_lock(&critical_region);//try to enter critical region to check element
-			new_generation_table[num[0]][j] = dead_or_alive(num[0],j);//left side
-			new_generation_table[num[0]+9][j] = dead_or_alive(num[0]+9,j);//right side
-			pthread_mutex_unlock(&critical_region);//exit from critixal region
-		}*/
-
 		//check all the inner table 8x8
 		for(i=num[0]; i<num[0]+10; ++i){
 			for(j=num[1]; j<num[1]+10; ++j){
 				new_state = dead_or_alive(i,j);
 				if(new_state){
-					pthread_mutex_lock(&critical_region);//try to enter critical region to check element
-					if(print_range_row<i){
-						print_range_row = i;
-					}
+					pthread_mutex_lock(&critical_region);//try to enter critical region to change the max size of col,row that will printed 
+						if(print_range_row<i){
+							print_range_row = i;
+						}
 
-					if(print_range_col<j){
-						print_range_col = j;
-					}
+						if(print_range_col<j){
+							print_range_col = j;
+						}
 					pthread_mutex_unlock(&critical_region);//exit from critical region
 				}
 				new_generation_table[i][j] = new_state; 
