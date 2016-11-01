@@ -19,6 +19,8 @@ void* thread_function(void* arg);
 //check and return the future of the state[x][y]
 int dead_or_alive(int x , int y);
 
+void sigfun(int sig);
+
 #endif //GOL_H
 
  /*

@@ -12,6 +12,8 @@
 #define ZERO "\x1B[0m"
 #define ONE "\x1B[31m"
 
+extern int total_generations;
+
 int print_range_row = 0;
 int print_range_col = 0;
 
@@ -73,6 +75,7 @@ void print_life_table(int** table){
 		}
 		printf("%s\n",ZERO);
 	}
+	printf("Generations: %d\n",total_generations);
 }
 
 //Why is that here? I dont known :D

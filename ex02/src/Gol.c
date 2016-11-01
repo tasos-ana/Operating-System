@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 #include <pthread.h>
 #include <semaphore.h>
 
@@ -23,6 +24,7 @@ extern print_range_col;
 
 int** life_table;
 int** new_generation_table;
+int total_generations = 0;
 static int thread_counter = 0 ;
 
 static pthread_mutex_t spawn_mutex;//Use that mutex each time that spawn new thread so we can read function input before change
@@ -102,7 +104,10 @@ void* thread_function(void* arg){
 		//enter on critical region se we can increase the thread completed counter
 		pthread_mutex_lock(&thr_cnt_inc_mutex);
 		thread_counter++;
-		if(thread_counter==100) sem_post(&thread_complete_semaphore);//if we are the last thread that end unblock main se we can move on next generation
+		if(thread_counter==100) {
+			sem_post(&thread_complete_semaphore);//if we are the last thread that end unblock main se we can move on next generation
+			total_generations++;
+		}
 		pthread_mutex_unlock(&thr_cnt_inc_mutex);//exit critical region
 
 		sem_wait(&generation_end_semaphore);//w8 for main signal when all thread end
@@ -143,8 +148,17 @@ int dead_or_alive(int x , int y){
 	}
 }
 
+void sigfun(int sig){
+	printf("tr - C pressed. Programm closing normally.\n");
+	destroy_life_table(new_generation_table);
+	destroy_life_table(life_table);
+	exit(0);
+}
+
 int main(int argc, char const *argv[])
 {
+	(void) signal(SIGINT, sigfun);
+	
 	int i,j,threads;
 
 	threads = 100;
@@ -190,8 +204,6 @@ int main(int argc, char const *argv[])
 		//unblock the rest threads and let the me known that all threads completed
 		for(i=0;i<100;++i) sem_post(&generation_end_semaphore);
 	}
-	//useless
-	destroy_life_table(life_table);
 	return 0;
 }
 
