@@ -26,7 +26,8 @@ char* home_dir = NULL;
  */
 int deamon_f;
 int redirection_f;
-int pipe_f;int input_redirection_f;
+int pipe_f;
+int input_redirection_f;
 int output_redirection_f;
 int append_redirection_f;
 int var_f;

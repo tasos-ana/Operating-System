@@ -359,6 +359,7 @@ char** merge_cmd_input(char** cmd,char** input_data){
 	int i;
 	while(cmd[i]!=NULL){
 		i++;
+		printf("%d\n",i);
 	}
 	int j = 0;
 
